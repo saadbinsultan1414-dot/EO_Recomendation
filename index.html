@@ -1379,16 +1379,33 @@ function computeSignal(candles) {
 
   // ── القرار حسب نوع السوق ─────────────────────────────────────────
   let regime, regimeLabel, score;
+  // اتجاه السوق من EMA50 وآخر 10 شموع
+  const recentPrices = price.slice(-10);
+  const priceTrend   = recentPrices[recentPrices.length-1] - recentPrices[0];
+  const trendDir     = T >= 0.25 ? 'up' : T <= -0.25 ? 'down' : 'flat';
+
   if (adx >= 25) {
-    regime = 'trend'; regimeLabel = '📈 سوق متجه';
-    score = 0.75*T + 0.25*V;                 // تتبع الاتجاه
-    if (T>0 && O> 0.85) score *= 0.4;         // تجنّب الشراء عند تشبع شديد
+    regime = 'trend';
+    if (trendDir === 'up')
+      regimeLabel = '📈 سوق متجه للأعلى';
+    else if (trendDir === 'down')
+      regimeLabel = '📉 سوق متجه للأسفل';
+    else
+      regimeLabel = '📊 سوق متجه';
+    score = 0.75*T + 0.25*V;
+    if (T>0 && O> 0.85) score *= 0.4;
     if (T<0 && O<-0.85) score *= 0.4;
   } else if (adx < 18) {
-    regime = 'range'; regimeLabel = '↔️ سوق عرضي';
-    score = -0.7*O + 0.2*Bmean + 0.1*V;       // عكس الحركة عند التطرف
+    regime = 'range'; regimeLabel = '↔️ سوق عرضي (لا اتجاه)';
+    score = -0.7*O + 0.2*Bmean + 0.1*V;
   } else {
-    regime = 'mixed'; regimeLabel = '🔀 سوق مختلط';
+    regime = 'mixed';
+    if (trendDir === 'up')
+      regimeLabel = '🔀 سوق مختلط — ميل للأعلى';
+    else if (trendDir === 'down')
+      regimeLabel = '🔀 سوق مختلط — ميل للأسفل';
+    else
+      regimeLabel = '🔀 سوق مختلط';
     score = 0.5*T - 0.35*O + 0.15*V;
   }
   score = Math.max(-1, Math.min(1, score));
