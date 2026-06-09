@@ -626,7 +626,7 @@
 
       <div class="confidence-wrap">
         <div class="confidence-label">
-          <span>قوة الإشارة</span>
+          <span>🎯 احتمال نجاح التوصية</span>
           <strong id="confPct">0%</strong>
         </div>
         <div class="bar-track">
@@ -1310,18 +1310,160 @@ function buildVotes(candles) {
   return { signal:dominantDir, confidence, rawConf, candles, indMap, votes };
 }
 
-// ─── ANALYSIS ON REAL CANDLES ──────────────────────────────────────────
-function runAnalysisOnCandles(candles) {
-  const r = buildVotes(candles);
-  return {
-    signal:      r.signal,
-    confidence:  r.confidence,
-    candles:     r.candles,
-    weak:        r.confidence < 70,
-    rawConf:     r.rawConf,
-    indicators:  r.indMap,
-    votes:       r.votes
+// ─── ADX: قياس قوة الاتجاه (لكشف نوع السوق) ──────────────────────────
+function calcADX(candles, period = 14) {
+  if (candles.length < period * 2 + 2) return 15;
+  const plusDM = [], minusDM = [], tr = [];
+  for (let i = 1; i < candles.length; i++) {
+    const up = candles[i].high - candles[i-1].high;
+    const dn = candles[i-1].low - candles[i].low;
+    plusDM.push(up > dn && up > 0 ? up : 0);
+    minusDM.push(dn > up && dn > 0 ? dn : 0);
+    tr.push(Math.max(
+      candles[i].high - candles[i].low,
+      Math.abs(candles[i].high - candles[i-1].close),
+      Math.abs(candles[i].low  - candles[i-1].close)
+    ));
+  }
+  // Wilder smoothing
+  const smooth = arr => {
+    let s = arr.slice(0, period).reduce((a,b)=>a+b, 0);
+    const out = [s];
+    for (let i = period; i < arr.length; i++) { s = s - s/period + arr[i]; out.push(s); }
+    return out;
   };
+  const sP = smooth(plusDM), sM = smooth(minusDM), sTR = smooth(tr);
+  const dx = [];
+  for (let i = 0; i < sTR.length; i++) {
+    const pdi = 100 * sP[i] / (sTR[i] || 1);
+    const mdi = 100 * sM[i] / (sTR[i] || 1);
+    dx.push(100 * Math.abs(pdi - mdi) / ((pdi + mdi) || 1));
+  }
+  const tail = dx.slice(-period);
+  return tail.reduce((a,b)=>a+b, 0) / (tail.length || 1);
+}
+
+// ─── CORE SIGNAL — مجمّع حسب نوع السوق (يعالج تداخل المؤشرات) ─────────
+// يرجع score بين -1 (بيع قوي) و +1 (شراء قوي)
+function computeSignal(candles) {
+  if (candles.length < 55)
+    return { signal:'none', score:0, regime:'unknown', regimeLabel:'—', adx:0 };
+
+  const price = closes(candles);
+  const rsi14 = calcRSI(price, 14), rsi6 = calcRSI(price, 6);
+  const macd  = calcMACD(price);
+  const stoch = calcStoch(candles, 14, 3);
+  const boll  = calcBollinger(price, 20);
+  const e9 = calcEMA(price, 9), e21 = calcEMA(price, 21), e50 = calcEMA(price, 50);
+  const obv = calcOBV(candles);
+  const wR  = calcWilliamsR(candles, 14);
+  const adx = calcADX(candles, 14);
+  const last = price[price.length - 1];
+
+  // مجموعة المذبذبات (oscillators) — صوت واحد بدل 4 (يعالج التداخل)
+  const nR14 = (rsi14-50)/50, nR6 = (rsi6-50)/50;
+  const nS   = (stoch.k-50)/50, nW = (wR+50)/50;
+  const O = (nR14 + nR6 + nS + nW) / 4;   // + = تشبع شرائي (فرصة بيع)
+
+  // مجموعة الاتجاه (trend) — صوت واحد
+  let emaAlign = 0;
+  if      (e9>e21 && e21>e50) emaAlign = 1;
+  else if (e9>e21)            emaAlign = 0.5;
+  else if (e9<e21 && e21<e50) emaAlign = -1;
+  else if (e9<e21)            emaAlign = -0.5;
+  let T = emaAlign*0.5 + (macd.hist>0?0.3:-0.3) + (last>e50?0.2:-0.2);
+  T = Math.max(-1, Math.min(1, T));
+
+  const V = obv.rising ? 1 : -1;            // الحجم
+  const Bmean = (50 - boll.pct) / 50;        // + قرب النطاق السفلي (شراء)
+
+  // ── القرار حسب نوع السوق ─────────────────────────────────────────
+  let regime, regimeLabel, score;
+  if (adx >= 25) {
+    regime = 'trend'; regimeLabel = '📈 سوق متجه';
+    score = 0.75*T + 0.25*V;                 // تتبع الاتجاه
+    if (T>0 && O> 0.85) score *= 0.4;         // تجنّب الشراء عند تشبع شديد
+    if (T<0 && O<-0.85) score *= 0.4;
+  } else if (adx < 18) {
+    regime = 'range'; regimeLabel = '↔️ سوق عرضي';
+    score = -0.7*O + 0.2*Bmean + 0.1*V;       // عكس الحركة عند التطرف
+  } else {
+    regime = 'mixed'; regimeLabel = '🔀 سوق مختلط';
+    score = 0.5*T - 0.35*O + 0.15*V;
+  }
+  score = Math.max(-1, Math.min(1, score));
+  const signal = score > 0.08 ? 'buy' : score < -0.08 ? 'sell' : 'none';
+  return { signal, score, regime, regimeLabel, adx };
+}
+
+// ─── BACKTEST — يقيس الدقة الفعلية على البيانات التاريخية ────────────
+// لكل شمعة تاريخية: يولّد الإشارة ثم يتحقق من حركة الشمعة التالية
+function backtest(candles, horizon = 1) {
+  const minLB = 55;
+  let wins = 0, total = 0;
+  const dirW = { buy:0, sell:0 }, dirT = { buy:0, sell:0 };
+  const bucket = [];
+  for (let i = minLB; i < candles.length - horizon; i++) {
+    const s = computeSignal(candles.slice(0, i+1));
+    if (s.signal === 'none') continue;
+    const entry = candles[i].close;
+    const exit  = candles[i + horizon].close;
+    const up = exit > entry;
+    const won = (s.signal==='buy' && up) || (s.signal==='sell' && !up);
+    total++; if (won) wins++;
+    dirT[s.signal]++; if (won) dirW[s.signal]++;
+    bucket.push({ a: Math.abs(s.score), won });
+  }
+  return { wins, total, dirW, dirT, bucket, winRate: total ? wins/total : 0.5 };
+}
+
+// ─── التحليل الكامل: إشارة + احتمال نجاح حقيقي مُقاس ──────────────────
+function analyzeCandles(candles, profit) {
+  const votesObj = buildVotes(candles);     // لعرض المؤشرات الفردية
+  const cur = computeSignal(candles);
+  const bt  = backtest(candles, 1);
+
+  // الاحتمال المُعاير من الـ backtest
+  let prob;
+  if (cur.signal === 'none' || bt.total < 10) {
+    prob = (bt.winRate || 0.5);
+  } else {
+    const dT = bt.dirT[cur.signal], dW = bt.dirW[cur.signal];
+    let p = dT >= 12 ? dW/dT : bt.winRate;
+    // تحسين بحسب قوة القناعة: الإشارات ذات score مشابه أو أقوى
+    const strong = bt.bucket.filter(x => x.a >= Math.abs(cur.score) * 0.85);
+    if (strong.length >= 12) {
+      const sp = strong.filter(x => x.won).length / strong.length;
+      p = 0.5*p + 0.5*sp;
+    }
+    prob = p;
+  }
+  let probability = Math.round(Math.max(40, Math.min(85, prob * 100)));
+
+  // نقطة التعادل = الحد الأدنى من الفوز للربح، مشتقة من نسبة ربح الأصل
+  const breakeven = Math.round(100 * 100 / (100 + profit));
+  const edge = probability - breakeven;
+  const hasEdge = cur.signal !== 'none' && edge > 0;
+
+  return {
+    signal:      cur.signal === 'none' ? votesObj.signal : cur.signal,
+    confidence:  probability,
+    probability,
+    breakeven, edge, hasEdge,
+    regimeLabel: cur.regimeLabel,
+    adx:         Math.round(cur.adx),
+    btTotal:     bt.total,
+    btWinRate:   Math.round(bt.winRate * 100),
+    candles,
+    indicators:  votesObj.indMap,
+    votes:       votesObj.votes,
+    weak:        !hasEdge
+  };
+}
+
+// توافقية قديمة
+function runAnalysisOnCandles(candles) {
+  return analyzeCandles(candles, 80);
 }
 
 // ─── MARKET HOURS ─────────────────────────────────────────────────────
@@ -1548,14 +1690,25 @@ function showMarketClosed(status) {
 }
 
 function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTFLabel) {
-  // إذا عندنا بيانات حقيقية نحللها مباشرة، وإلا نستخدم المحاكاة
-  const result = realCandles
-    ? runAnalysisOnCandles(realCandles)
-    : runAnalysisWithGate(6);
+  const candles = realCandles || generateOHLC(200);
+  const result  = analyzeCandles(candles, selectedAsset.profit);
+  const isReal  = dataSource === 'binance' || dataSource === 'twelvedata';
+
   document.getElementById('loadingCard').classList.add('hidden');
   document.getElementById('resultSection').classList.remove('hidden');
 
-  // ── WEAK SIGNAL: show wait screen ──────────────────────────────────
+  const srcLabel = {
+    binance:    '🟢 بيانات Binance حقيقية',
+    twelvedata: '🟢 بيانات Twelve Data حقيقية',
+    simulation: '🟡 محاكاة (OTC)',
+    simulation_no_key: '🟠 محاكاة (أدخل API Key للفوركس)',
+    otc:        '🟡 محاكاة (أصول OTC)'
+  }[dataSource] || '⚪ محاكاة';
+
+  // معلومة الـ backtest المشتركة
+  const btNote = `📊 اختُبرت على ${result.btTotal} إشارة سابقة · نوع السوق: ${result.regimeLabel} (ADX ${result.adx})`;
+
+  // ── حالة: لا أفضلية (انتظر) ─────────────────────────────────────────
   if (result.weak) {
     const hdr = document.getElementById('resultHeader');
     hdr.className = 'result-header';
@@ -1568,39 +1721,44 @@ function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTF
     sigEl.style.color = 'var(--gold)';
     sigEl.style.fontSize = '36px';
     document.getElementById('resultAsset').textContent = selectedAsset.name;
-    document.getElementById('resultTimeInfo').textContent =
-      `السوق غير واضح الآن — حاول بعد دقيقتين · ${new Date().toLocaleTimeString('ar')}`;
+    document.getElementById('resultTimeInfo').innerHTML =
+      `لا توجد أفضلية ربحية الآن · ${new Date().toLocaleTimeString('ar')}<br>
+       <span style="font-size:11px;opacity:.8;">${srcLabel}</span>`;
 
-    document.getElementById('confPct').textContent = result.confidence + '%';
+    document.getElementById('confPct').textContent = result.probability + '%';
     const bar = document.getElementById('confBar');
     bar.className = 'bar-fill';
     bar.style.background = 'var(--gold)';
-    setTimeout(() => { bar.style.width = result.confidence + '%'; }, 100);
+    setTimeout(() => { bar.style.width = result.probability + '%'; }, 100);
 
-    drawMainChart(result.candles, 'neutral');
+    document.getElementById('chartTitle').textContent = `الشارت التحليلي — إطار ${tfLabel}`;
+    drawMainChart(candles, 'neutral');
+
+    const reason = result.signal === 'none' || result.btTotal < 10
+      ? 'السوق غير واضح — لا توجد إشارة قوية'
+      : `احتمال النجاح (${result.probability}%) أقل من نقطة التعادل (${result.breakeven}%)`;
 
     document.getElementById('indicatorsGrid').innerHTML = `
-      <div class="ind-item" style="grid-column:1/-1;justify-content:center;padding:20px;">
-        <span style="color:var(--gold);font-size:14px;font-weight:600;">
-          ⚠️ المؤشرات متضاربة — لا توجد إشارة واضحة بنسبة تجاوز 70%
-        </span>
+      <div class="ind-item" style="grid-column:1/-1;flex-direction:column;gap:6px;padding:18px;text-align:center;">
+        <span style="color:var(--gold);font-size:14px;font-weight:700;">⚠️ ${reason}</span>
+        <span style="color:var(--text-muted);font-size:12px;">${btNote}</span>
       </div>`;
 
     document.getElementById('summarySection').innerHTML = `
-      <div class="summary-row">
-        <span class="summary-key">قوة الإشارة</span>
-        <span class="summary-val" style="color:var(--gold)">${result.confidence}% (أقل من الحد الأدنى 70%)</span>
-      </div>
-      <div class="summary-row">
-        <span class="summary-key">التوصية</span>
-        <span class="summary-val" style="color:var(--gold)">⏳ انتظر فرصة أفضل</span>
-      </div>`;
+      <div class="summary-row"><span class="summary-key">احتمال النجاح المُقاس</span>
+        <span class="summary-val" style="color:var(--gold)">${result.probability}%</span></div>
+      <div class="summary-row"><span class="summary-key">نقطة التعادل (ربح ${selectedAsset.profit}%)</span>
+        <span class="summary-val">${result.breakeven}%</span></div>
+      <div class="summary-row"><span class="summary-key">الأفضلية (Edge)</span>
+        <span class="summary-val" style="color:var(--red)">${result.edge}% ❌</span></div>
+      <div class="summary-row"><span class="summary-key">التوصية</span>
+        <span class="summary-val" style="color:var(--gold)">⏳ لا تدخل — انتظر فرصة أفضل</span></div>`;
 
     document.getElementById('resultSection').scrollIntoView({ behavior:'smooth' });
     return;
   }
 
-  // ── STRONG SIGNAL ──────────────────────────────────────────────────
+  // ── إشارة قوية (أفضلية موجبة) ───────────────────────────────────────
   const isBuy = result.signal === 'buy';
 
   const hdr = document.getElementById('resultHeader');
@@ -1612,74 +1770,52 @@ function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTF
   sigEl.className = 'result-signal ' + result.signal;
   sigEl.style = '';
   document.getElementById('resultAsset').textContent = selectedAsset.name;
-  const srcLabel = {
-    binance: '🟢 بيانات Binance حقيقية',
-    twelvedata: '🟢 بيانات Twelve Data حقيقية',
-    simulation: '🟡 محاكاة (OTC)',
-    simulation_no_key: '🟠 محاكاة (أدخل API Key للفوركس)',
-    otc: '🟡 محاكاة (أصول OTC)'
-  }[dataSource] || '⚪ محاكاة';
-
   document.getElementById('resultTimeInfo').innerHTML =
     `مدة الصفقة: ${selectedTime} · إطار تحليل: ${tfLabel} · ${new Date().toLocaleTimeString('ar')}<br>
      <span style="font-size:11px;opacity:.8;">${srcLabel}</span>`;
 
+  // شريط = احتمال النجاح
+  document.querySelector('.confidence-label span').textContent = '🎯 احتمال نجاح التوصية';
   const bar = document.getElementById('confBar');
   bar.className = 'bar-fill ' + result.signal;
   bar.style = '';
   setTimeout(() => {
-    document.getElementById('confPct').textContent = result.confidence + '%';
-    bar.style.width = result.confidence + '%';
+    document.getElementById('confPct').textContent = result.probability + '%';
+    bar.style.width = result.probability + '%';
   }, 100);
 
-  document.getElementById('chartTitle').textContent =
-    `الشارت التحليلي — إطار ${tfLabel}`;
-  drawMainChart(result.candles, result.signal);
+  document.getElementById('chartTitle').textContent = `الشارت التحليلي — إطار ${tfLabel}`;
+  drawMainChart(candles, result.signal);
 
-  // Indicators grid
+  // شبكة المؤشرات
   const grid = document.getElementById('indicatorsGrid');
   grid.innerHTML = '';
   Object.values(result.indicators).forEach(ind => {
     const div = document.createElement('div');
     div.className = 'ind-item';
-    div.innerHTML = `
-      <span class="ind-name">${ind.label}</span>
+    div.innerHTML = `<span class="ind-name">${ind.label}</span>
       <span class="ind-value ${ind.dir}">${ind.value}</span>`;
     grid.appendChild(div);
   });
-
-  // Summary counts (weighted)
-  const buyCnt  = result.votes.filter(v => v.dir === 'buy').length;
-  const sellCnt = result.votes.filter(v => v.dir === 'sell').length;
-  const neutCnt = result.votes.filter(v => v.dir === 'neutral').length;
+  // صف نوع السوق
+  const regimeDiv = document.createElement('div');
+  regimeDiv.className = 'ind-item';
+  regimeDiv.style.cssText = 'grid-column:1/-1;justify-content:center;background:var(--surface3);';
+  regimeDiv.innerHTML = `<span style="color:var(--text-muted);font-size:12px;">${btNote}</span>`;
+  grid.appendChild(regimeDiv);
 
   document.getElementById('summarySection').innerHTML = `
-    <div class="summary-row">
-      <span class="summary-key">إشارات شراء</span>
-      <span class="summary-val" style="color:var(--green)">${buyCnt} مؤشرات</span>
-    </div>
-    <div class="summary-row">
-      <span class="summary-key">إشارات بيع</span>
-      <span class="summary-val" style="color:var(--red)">${sellCnt} مؤشرات</span>
-    </div>
-    <div class="summary-row">
-      <span class="summary-key">محايدة</span>
-      <span class="summary-val" style="color:var(--gold)">${neutCnt} مؤشرات</span>
-    </div>
-    <div class="summary-row">
-      <span class="summary-key">نسبة ربح الأصل</span>
-      <span class="summary-val">${selectedAsset.profit}%</span>
-    </div>
-    <div class="summary-row">
-      <span class="summary-key">قوة الإشارة</span>
-      <span class="summary-val" style="color:var(--cyan)">${result.confidence}%</span>
-    </div>
-    <div class="summary-row">
-      <span class="summary-key">التوصية النهائية</span>
+    <div class="summary-row"><span class="summary-key">🎯 احتمال النجاح المُقاس</span>
+      <span class="summary-val" style="color:var(--cyan);font-size:16px;">${result.probability}%</span></div>
+    <div class="summary-row"><span class="summary-key">نقطة التعادل (ربح ${selectedAsset.profit}%)</span>
+      <span class="summary-val">${result.breakeven}%</span></div>
+    <div class="summary-row"><span class="summary-key">الأفضلية (Edge)</span>
+      <span class="summary-val" style="color:var(--green)">+${result.edge}% ✓</span></div>
+    <div class="summary-row"><span class="summary-key">دقة الاستراتيجية إجمالاً</span>
+      <span class="summary-val">${result.btWinRate}% على ${result.btTotal} إشارة</span></div>
+    <div class="summary-row"><span class="summary-key">التوصية النهائية</span>
       <span class="summary-val" style="color:var(--${isBuy?'green':'red'});font-size:16px;">
-        ${isBuy ? '📈 شراء' : '📉 بيع'}
-      </span>
-    </div>`;
+        ${isBuy ? '📈 شراء' : '📉 بيع'}</span></div>`;
 
   document.getElementById('resultSection').scrollIntoView({ behavior:'smooth' });
 }
