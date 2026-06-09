@@ -1327,6 +1327,10 @@ async function startAnalysis() {
     }
   }
 
+  // ── نحفظ الإطار الزمني لحظة بدء التحليل (وليس وقت العرض) ──────────
+  const snapshotTFLabel = selectedTFLabel;
+  const snapshotTFApi   = selectedTFApi;
+
   advanceStep(); // جلب البيانات
 
   let candles;
@@ -1357,7 +1361,7 @@ async function startAnalysis() {
   }
 
   await delay(300);
-  showResult(candles, dataSource);
+  showResult(candles, dataSource, snapshotTFLabel);
 }
 
 function showMarketClosed(status) {
@@ -1427,7 +1431,7 @@ function showMarketClosed(status) {
   document.getElementById('resultSection').scrollIntoView({ behavior:'smooth' });
 }
 
-function showResult(realCandles, dataSource = 'simulation') {
+function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTFLabel) {
   // إذا عندنا بيانات حقيقية نحللها مباشرة، وإلا نستخدم المحاكاة
   const result = realCandles
     ? runAnalysisOnCandles(realCandles)
@@ -1501,7 +1505,7 @@ function showResult(realCandles, dataSource = 'simulation') {
   }[dataSource] || '⚪ محاكاة';
 
   document.getElementById('resultTimeInfo').innerHTML =
-    `مدة الصفقة: ${selectedTime} · إطار 5 دقائق · ${new Date().toLocaleTimeString('ar')}<br>
+    `مدة الصفقة: ${selectedTime} · إطار تحليل: ${tfLabel} · ${new Date().toLocaleTimeString('ar')}<br>
      <span style="font-size:11px;opacity:.8;">${srcLabel}</span>`;
 
   const bar = document.getElementById('confBar');
@@ -1513,7 +1517,7 @@ function showResult(realCandles, dataSource = 'simulation') {
   }, 100);
 
   document.getElementById('chartTitle').textContent =
-    `الشارت التحليلي — إطار ${selectedTFLabel}`;
+    `الشارت التحليلي — إطار ${tfLabel}`;
   drawMainChart(result.candles, result.signal);
 
   // Indicators grid
