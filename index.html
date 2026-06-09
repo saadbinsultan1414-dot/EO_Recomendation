@@ -427,9 +427,33 @@
 
   .hidden { display: none !important; }
 
-  /* API panel animation */
-  #apiPanelBody { transition: all .25s ease; }
-  #apiChevron.open { transform: rotate(180deg); }
+  /* Chevron animations */
+  #apiChevron.open, #timeChevron.open, #assetChevron.open { transform: rotate(180deg); }
+
+  /* ── LIGHT MODE ─────────────────────────────────────────────────── */
+  body.light {
+    --bg:       #f0f4f8;
+    --surface:  #ffffff;
+    --surface2: #e8edf2;
+    --surface3: #dde3ea;
+    --border:   #c8d0da;
+    --text:     #1a2332;
+    --text-muted: #5a6a7e;
+    --green-dim: #d4f4de;
+    --red-dim:   #fde8e8;
+  }
+  body.light header         { box-shadow: 0 1px 8px #0001; }
+  body.light .logo          { color: #0096cc; }
+  body.light .live-badge    { background: #d4f4de; border-color: var(--green); }
+  body.light #themeToggle   { background: #fff; border-color: #c8d0da; }
+  body.light .time-btn.active { background: #e0f5ff; }
+  body.light .asset-item.selected { background: #e0f5ff; }
+  body.light .result-header.buy  { background: linear-gradient(160deg,#d4f4de,#edfbf0); }
+  body.light .result-header.sell { background: linear-gradient(160deg,#fde8e8,#fff0f0); }
+  body.light .bar-track     { background: #dde3ea; }
+  body.light .signal-btn    { box-shadow: 0 4px 16px #00c8ff33; }
+  body.light input          { color: #1a2332; }
+  body.light a              { color: #0096cc; }
 
   /* Scrollbar */
   html::-webkit-scrollbar { width: 6px; }
@@ -444,7 +468,14 @@
     <div class="logo-icon">📊</div>
     إشارات ExpertOption
   </div>
-  <div class="live-badge">● مباشر</div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <!-- Dark/Light toggle -->
+    <button id="themeToggle" onclick="toggleTheme()"
+      style="background:var(--surface3);border:1px solid var(--border);border-radius:20px;
+             padding:4px 10px;cursor:pointer;font-size:14px;transition:all .2s;"
+      title="تبديل المظهر">🌙</button>
+    <div class="live-badge">● مباشر</div>
+  </div>
 </header>
 
 <main id="main">
@@ -477,59 +508,90 @@
     </div>
   </div>
 
-  <!-- STEP 1: TIME + CHART TIMEFRAME -->
+  <!-- STEP 1: TIME + CHART TIMEFRAME — قائمة منسدلة -->
   <div class="card" id="timeCard">
-    <div class="card-header">
-      <div class="step-badge">١</div>
-      <span>⏱</span> وقت انتهاء الصفقة
-    </div>
-    <div class="time-grid">
-      <button class="time-btn" onclick="selectTime(this,'1m')">1 د</button>
-      <button class="time-btn active" onclick="selectTime(this,'2m')">2 د</button>
-      <button class="time-btn" onclick="selectTime(this,'3m')">3 د</button>
-      <button class="time-btn" onclick="selectTime(this,'5m')">5 د</button>
-      <button class="time-btn" onclick="selectTime(this,'10m')">10 د</button>
-      <button class="time-btn" onclick="selectTime(this,'15m')">15 د</button>
-      <button class="time-btn" onclick="selectTime(this,'30m')">30 د</button>
-      <button class="time-btn" onclick="selectTime(this,'1h')">1 س</button>
-      <button class="time-btn" onclick="selectTime(this,'2h')">2 س</button>
-      <button class="time-btn" onclick="selectTime(this,'4h')">4 س</button>
-    </div>
-    <!-- إطار الشارت التحليلي -->
-    <div style="border-top:1px solid var(--border);padding:12px 16px;">
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-weight:600;display:flex;align-items:center;gap:6px;">
-        <span>📊</span> الإطار الزمني للتحليل
-        <span style="font-size:11px;opacity:.6;">(يؤثر على دقة التحليل)</span>
+    <div class="card-header" onclick="togglePanel('timeBody','timeChevron')"
+      style="cursor:pointer;user-select:none;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="step-badge">١</div>
+        <span>⏱</span>
+        <span>وقت انتهاء الصفقة</span>
+        <span id="timeSelectedBadge"
+          style="font-size:11px;padding:2px 8px;border-radius:20px;
+                 background:var(--surface3);border:1px solid var(--cyan);color:var(--cyan);">
+          2 د
+        </span>
       </div>
-      <div class="time-grid" style="grid-template-columns:repeat(6,1fr);">
-        <button class="time-btn tf-btn" onclick="selectTF(this,'5m','5min')" title="5 دقائق">5 د</button>
-        <button class="time-btn tf-btn active" onclick="selectTF(this,'15m','15min')" title="15 دقيقة">15 د</button>
-        <button class="time-btn tf-btn" onclick="selectTF(this,'30m','30min')" title="30 دقيقة">30 د</button>
-        <button class="time-btn tf-btn" onclick="selectTF(this,'1h','1h')" title="ساعة">1 س</button>
-        <button class="time-btn tf-btn" onclick="selectTF(this,'4h','4h')" title="4 ساعات">4 س</button>
-        <button class="time-btn tf-btn" onclick="selectTF(this,'1d','1day')" title="يوم">1 ي</button>
+      <span id="timeChevron" style="color:var(--text-muted);font-size:13px;transition:transform .3s;">▼</span>
+    </div>
+    <div id="timeBody" style="display:none;">
+      <div class="time-grid">
+        <button class="time-btn" onclick="selectTime(this,'1m')">1 د</button>
+        <button class="time-btn active" onclick="selectTime(this,'2m')">2 د</button>
+        <button class="time-btn" onclick="selectTime(this,'3m')">3 د</button>
+        <button class="time-btn" onclick="selectTime(this,'5m')">5 د</button>
+        <button class="time-btn" onclick="selectTime(this,'10m')">10 د</button>
+        <button class="time-btn" onclick="selectTime(this,'15m')">15 د</button>
+        <button class="time-btn" onclick="selectTime(this,'30m')">30 د</button>
+        <button class="time-btn" onclick="selectTime(this,'1h')">1 س</button>
+        <button class="time-btn" onclick="selectTime(this,'2h')">2 س</button>
+        <button class="time-btn" onclick="selectTime(this,'4h')">4 س</button>
       </div>
-      <div id="tfDesc" style="margin-top:8px;font-size:11px;color:var(--cyan);text-align:center;">
-        ⚡ 15 دقيقة — مناسب للصفقات القصيرة (2-5 دقائق)
+      <!-- إطار التحليل -->
+      <div style="border-top:1px solid var(--border);padding:12px 16px;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-weight:600;
+                    display:flex;align-items:center;gap:6px;">
+          <span>📊</span> الإطار الزمني للتحليل
+          <span id="tfSelectedBadge"
+            style="font-size:11px;padding:2px 8px;border-radius:20px;
+                   background:var(--surface3);border:1px solid var(--cyan);color:var(--cyan);">
+            15 د
+          </span>
+        </div>
+        <div class="time-grid" style="grid-template-columns:repeat(6,1fr);">
+          <button class="time-btn tf-btn" onclick="selectTF(this,'5m','5min')">5 د</button>
+          <button class="time-btn tf-btn active" onclick="selectTF(this,'15m','15min')">15 د</button>
+          <button class="time-btn tf-btn" onclick="selectTF(this,'30m','30min')">30 د</button>
+          <button class="time-btn tf-btn" onclick="selectTF(this,'1h','1h')">1 س</button>
+          <button class="time-btn tf-btn" onclick="selectTF(this,'4h','4h')">4 س</button>
+          <button class="time-btn tf-btn" onclick="selectTF(this,'1d','1day')">1 ي</button>
+        </div>
+        <div id="tfDesc" style="margin-top:8px;font-size:11px;color:var(--cyan);text-align:center;">
+          ⚡ 15 دقيقة — مناسب للصفقات القصيرة (2-5 دقائق)
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- STEP 2: ASSET -->
+  <!-- STEP 2: ASSET — قائمة منسدلة -->
   <div class="card" id="assetCard">
-    <div class="card-header">
-      <div class="step-badge">٢</div>
-      <span>📈</span> اختر الأصل
+    <div class="card-header" onclick="togglePanel('assetBody','assetChevron')"
+      style="cursor:pointer;user-select:none;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="step-badge">٢</div>
+        <span>📈</span>
+        <span>اختر الأصل</span>
+        <span id="assetSelectedBadge"
+          style="font-size:11px;padding:2px 8px;border-radius:20px;
+                 background:var(--surface3);border:1px solid var(--border);
+                 color:var(--text-muted);max-width:120px;overflow:hidden;
+                 white-space:nowrap;text-overflow:ellipsis;">
+          لم يُحدد
+        </span>
+      </div>
+      <span id="assetChevron" style="color:var(--text-muted);font-size:13px;transition:transform .3s;">▼</span>
     </div>
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('trading',this)">Trading</button>
-      <button class="tab-btn" onclick="switchTab('stocks',this)">Stocks</button>
-      <button class="tab-btn" onclick="switchTab('crypto',this)">Crypto</button>
+    <div id="assetBody" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('trading',this)">Trading</button>
+        <button class="tab-btn" onclick="switchTab('stocks',this)">Stocks</button>
+        <button class="tab-btn" onclick="switchTab('crypto',this)">Crypto</button>
+      </div>
+      <div class="search-wrap">
+        <input class="search-input" id="searchInput" placeholder="ابحث عن أصل..." oninput="filterAssets()" />
+      </div>
+      <div class="asset-list" id="assetList"></div>
     </div>
-    <div class="search-wrap">
-      <input class="search-input" id="searchInput" placeholder="ابحث عن أصل..." oninput="filterAssets()" />
-    </div>
-    <div class="asset-list" id="assetList"></div>
   </div>
 
   <!-- STEP 3: BUTTON -->
@@ -672,16 +734,47 @@ const TWELVEDATA_TF = {
   '5m':'5min', '15m':'15min', '30m':'30min', '1h':'1h', '4h':'4h', '1d':'1day'
 };
 
-// ─── API PANEL TOGGLE ─────────────────────────────────────────────────
+// ─── GENERIC PANEL TOGGLE ─────────────────────────────────────────────
+function togglePanel(bodyId, chevronId) {
+  const body    = document.getElementById(bodyId);
+  const chevron = document.getElementById(chevronId);
+  const isOpen  = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  chevron.classList.toggle('open', !isOpen);
+}
+
 function toggleApiPanel() {
   const body    = document.getElementById('apiPanelBody');
   const chevron = document.getElementById('apiChevron');
   const isOpen  = body.style.display === 'flex';
-  body.style.display    = isOpen ? 'none' : 'flex';
+  body.style.display       = isOpen ? 'none' : 'flex';
   body.style.flexDirection = 'column';
-  body.style.gap        = '12px';
+  body.style.gap           = '12px';
   chevron.classList.toggle('open', !isOpen);
 }
+
+// ─── THEME TOGGLE ─────────────────────────────────────────────────────
+let isDark = true;
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('light', !isDark);
+  const btn = document.getElementById('themeToggle');
+  btn.textContent = isDark ? '🌙' : '☀️';
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+// استعادة المظهر المحفوظ
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    isDark = false;
+    document.body.classList.add('light');
+    // سيتم تعيين الأيقونة بعد تحميل الصفحة
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('themeToggle');
+      if (btn) btn.textContent = '☀️';
+    });
+  }
+})();
 
 // ─── CHART TIMEFRAME ──────────────────────────────────────────────────
 function selectTF(btn, label, apiVal) {
@@ -689,8 +782,14 @@ function selectTF(btn, label, apiVal) {
   btn.classList.add('active');
   selectedTFLabel = label;
   selectedTFApi   = apiVal;
-  const desc = document.getElementById('tfDesc');
-  desc.textContent = TF_DESCRIPTIONS[label] || '';
+  document.getElementById('tfDesc').textContent = TF_DESCRIPTIONS[label] || '';
+  // تحديث badge الإطار
+  const tfBadge = document.getElementById('tfSelectedBadge');
+  if (tfBadge) tfBadge.textContent = btn.textContent;
+  // تحديث badge الوقت أيضاً
+  const activeTime = document.querySelector('.time-btn:not(.tf-btn).active');
+  const timeBadge = document.getElementById('timeSelectedBadge');
+  if (timeBadge && activeTime) timeBadge.textContent = activeTime.textContent + ' · ' + btn.textContent;
 }
 
 // ─── API KEY ──────────────────────────────────────────────────────────
@@ -833,9 +932,12 @@ function generateLine(n, trend) {
 
 // ─── INTERACTIONS ─────────────────────────────────────────────────────
 function selectTime(btn, val) {
-  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.time-btn:not(.tf-btn)').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedTime = val;
+  // تحديث الـ badge
+  const badge = document.getElementById('timeSelectedBadge');
+  if (badge) badge.textContent = btn.textContent + ' · ' + (document.querySelector('.tf-btn.active')||{textContent:'15 د'}).textContent;
   updateBtn();
 }
 
@@ -844,6 +946,20 @@ function selectAsset(asset) {
   document.querySelectorAll('.asset-item').forEach(el => el.classList.remove('selected'));
   const el = document.getElementById('asset_' + asset.id);
   if (el) el.classList.add('selected');
+  // تحديث badge الأصل
+  const badge = document.getElementById('assetSelectedBadge');
+  if (badge) {
+    badge.textContent = asset.icon + ' ' + asset.name;
+    badge.style.borderColor = 'var(--cyan)';
+    badge.style.color = 'var(--cyan)';
+  }
+  // إغلاق قائمة الأصول تلقائياً بعد الاختيار
+  const body = document.getElementById('assetBody');
+  const chevron = document.getElementById('assetChevron');
+  if (body && body.style.display !== 'none') {
+    body.style.display = 'none';
+    if (chevron) chevron.classList.remove('open');
+  }
   updateBtn();
 }
 
