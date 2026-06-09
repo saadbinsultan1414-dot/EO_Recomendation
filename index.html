@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إشارات التداول - ExpertOption</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --surface3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --green: #3fb950;
+    --green-dim: #1a3a2a;
+    --red: #f85149;
+    --red-dim: #3a1a1a;
+    --blue: #58a6ff;
+    --cyan: #00c8ff;
+    --gold: #e3b341;
+    --radius: 12px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* HEADER */
+  header {
+    width: 100%;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--cyan);
+  }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, #00c8ff22, #00c8ff44);
+    border: 1px solid var(--cyan);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .live-badge {
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  /* MAIN */
+  main {
+    width: 100%;
+    max-width: 520px;
+    padding: 20px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .card-header span { color: var(--cyan); font-size: 15px; }
+
+  /* STEP BADGE */
+  .step-badge {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--cyan);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* TIME SELECTOR */
+  .time-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    padding: 16px;
+  }
+  .time-btn {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 8px;
+    padding: 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+  }
+  .time-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .time-btn.active {
+    background: linear-gradient(135deg, #00c8ff22, #00c8ff11);
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 10px #00c8ff22;
+  }
+
+  /* ASSET SEARCH */
+  .search-wrap {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 14px;
+    outline: none;
+    direction: rtl;
+  }
+  .search-input:focus { border-color: var(--cyan); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    padding: 12px 16px 0;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    margin-bottom: -1px;
+  }
+  .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+  /* ASSET LIST */
+  .asset-list { max-height: 320px; overflow-y: auto; }
+  .asset-list::-webkit-scrollbar { width: 4px; }
+  .asset-list::-webkit-scrollbar-track { background: transparent; }
+  .asset-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .asset-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+    position: relative;
+  }
+  .asset-item:hover { background: var(--surface2); }
+  .asset-item.selected { background: linear-gradient(135deg, #00c8ff08, transparent); }
+  .asset-item.selected::before {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--cyan);
+    border-radius: 0 3px 3px 0;
+  }
+  .asset-icon {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .asset-info { flex: 1; }
+  .asset-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .asset-profit { font-size: 12px; color: var(--blue); margin-top: 2px; }
+  .asset-mini-chart { width: 70px; height: 30px; }
+  .asset-check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--cyan);
+    display: flex; align-items: center; justify-content: center;
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .asset-item.selected .asset-check { opacity: 1; }
+
+  /* SIGNAL BUTTON */
+  .signal-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--cyan), #0096cc);
+    border: none;
+    border-radius: var(--radius);
+    color: #000;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: .3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .signal-btn:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 8px 24px #00c8ff33; }
+  .signal-btn:active { transform: translateY(0); }
+  .signal-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+  /* LOADING */
+  .loading-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 16px;
+    text-align: center;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+  .loading-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+    justify-content: center;
+  }
+  .loading-step.done { color: var(--green); }
+  .loading-step .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .loading-step.done .dot { background: var(--green); }
+  .loading-step.active .dot { background: var(--cyan); animation: pulse 1s infinite; }
+
+  /* RESULT CARD */
+  .result-card {
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .result-header {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .result-header.buy { background: linear-gradient(160deg, #1a3a2a, #0d2018); border-bottom: 1px solid var(--green); }
+  .result-header.sell { background: linear-gradient(160deg, #3a1a1a, #200d0d); border-bottom: 1px solid var(--red); }
+
+  .result-signal {
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: 2px;
+  }
+  .result-signal.buy { color: var(--green); }
+  .result-signal.sell { color: var(--red); }
+  .result-arrow { font-size: 56px; line-height: 1; }
+  .result-asset { font-size: 18px; font-weight: 700; color: var(--text); }
+  .result-time-info { font-size: 13px; color: var(--text-muted); }
+
+  /* CONFIDENCE */
+  .confidence-wrap {
+    background: var(--surface);
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .confidence-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .confidence-label strong { color: var(--text); font-size: 15px; }
+  .bar-track {
+    background: var(--surface3);
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+  }
+  .bar-fill.buy { background: linear-gradient(90deg, var(--green), #5eff8a); }
+  .bar-fill.sell { background: linear-gradient(90deg, var(--red), #ff8a7a); }
+
+  /* INDICATORS */
+  .indicators-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+  .ind-item {
+    background: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ind-name { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .ind-value { font-size: 13px; font-weight: 700; }
+  .ind-value.buy { color: var(--green); }
+  .ind-value.sell { color: var(--red); }
+  .ind-value.neutral { color: var(--gold); }
+
+  /* CHART MINI */
+  .chart-section {
+    background: var(--surface);
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .chart-title { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
+  canvas.main-chart { width: 100%; border-radius: 8px; }
+
+  /* SUMMARY */
+  .summary-section {
+    background: var(--surface);
+    padding: 16px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-key { color: var(--text-muted); }
+  .summary-val { font-weight: 600; color: var(--text); }
+
+  /* NEW ANALYSIS BTN */
+  .new-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .new-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 0 16px;
+    line-height: 1.5;
+  }
+
+  .hidden { display: none !important; }
+
+  /* API panel animation */
+  #apiPanelBody { transition: all .25s ease; }
+  #apiChevron.open { transform: rotate(180deg); }
+
+  /* Scrollbar */
+  html::-webkit-scrollbar { width: 6px; }
+  html::-webkit-scrollbar-track { background: var(--bg); }
+  html::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    إشارات ExpertOption
+  </div>
+  <div class="live-badge">● مباشر</div>
+</header>
+
+<main id="main">
+
+  <!-- API KEY SETUP — قائمة منسدلة -->
+  <div class="card" id="apiSetupCard">
+    <div class="card-header" onclick="toggleApiPanel()" style="cursor:pointer;user-select:none;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span>🔑</span>
+        <span>إعداد API</span>
+        <span id="apiStatusDot" style="font-size:11px;padding:2px 8px;border-radius:20px;background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);">⚪ غير مفعّل</span>
+      </div>
+      <span id="apiChevron" style="color:var(--text-muted);font-size:13px;transition:transform .3s;">▼</span>
+    </div>
+    <div id="apiPanelBody" style="display:none;padding:16px;display:none;flex-direction:column;gap:12px;">
+      <div style="background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text-muted);line-height:1.7;">
+        🔗 للأصول الحقيقية (فوركس/أسهم): أنشئ حساباً مجانياً على
+        <a href="https://twelvedata.com" target="_blank" style="color:var(--cyan);">twelvedata.com</a>
+        واحصل على API Key مجاناً.<br>
+        ₿ العملات الرقمية: لا تحتاج API Key — تلقائي عبر Binance.
+      </div>
+      <input class="search-input" id="apiKeyInput"
+        placeholder="الصق Twelve Data API Key هنا..."
+        style="font-family:monospace;font-size:13px;letter-spacing:1px;"
+        oninput="saveApiKey()" />
+      <span id="apiStatus" style="font-size:12px;color:var(--text-muted);">⚪ لم يتم إدخال مفتاح — الفوركس سيعمل بمحاكاة</span>
+      <div style="background:var(--green-dim);border:1px solid var(--green);border-radius:8px;padding:10px;font-size:12px;color:var(--green);">
+        ✅ الكريبتو (BTC/ETH/SOL...) يعمل ببيانات حقيقية مباشرة الآن دون API Key
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1: TIME + CHART TIMEFRAME -->
+  <div class="card" id="timeCard">
+    <div class="card-header">
+      <div class="step-badge">١</div>
+      <span>⏱</span> وقت انتهاء الصفقة
+    </div>
+    <div class="time-grid">
+      <button class="time-btn" onclick="selectTime(this,'1m')">1 د</button>
+      <button class="time-btn active" onclick="selectTime(this,'2m')">2 د</button>
+      <button class="time-btn" onclick="selectTime(this,'3m')">3 د</button>
+      <button class="time-btn" onclick="selectTime(this,'5m')">5 د</button>
+      <button class="time-btn" onclick="selectTime(this,'10m')">10 د</button>
+      <button class="time-btn" onclick="selectTime(this,'15m')">15 د</button>
+      <button class="time-btn" onclick="selectTime(this,'30m')">30 د</button>
+      <button class="time-btn" onclick="selectTime(this,'1h')">1 س</button>
+      <button class="time-btn" onclick="selectTime(this,'2h')">2 س</button>
+      <button class="time-btn" onclick="selectTime(this,'4h')">4 س</button>
+    </div>
+    <!-- إطار الشارت التحليلي -->
+    <div style="border-top:1px solid var(--border);padding:12px 16px;">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-weight:600;display:flex;align-items:center;gap:6px;">
+        <span>📊</span> الإطار الزمني للتحليل
+        <span style="font-size:11px;opacity:.6;">(يؤثر على دقة التحليل)</span>
+      </div>
+      <div class="time-grid" style="grid-template-columns:repeat(6,1fr);">
+        <button class="time-btn tf-btn" onclick="selectTF(this,'5m','5min')" title="5 دقائق">5 د</button>
+        <button class="time-btn tf-btn active" onclick="selectTF(this,'15m','15min')" title="15 دقيقة">15 د</button>
+        <button class="time-btn tf-btn" onclick="selectTF(this,'30m','30min')" title="30 دقيقة">30 د</button>
+        <button class="time-btn tf-btn" onclick="selectTF(this,'1h','1h')" title="ساعة">1 س</button>
+        <button class="time-btn tf-btn" onclick="selectTF(this,'4h','4h')" title="4 ساعات">4 س</button>
+        <button class="time-btn tf-btn" onclick="selectTF(this,'1d','1day')" title="يوم">1 ي</button>
+      </div>
+      <div id="tfDesc" style="margin-top:8px;font-size:11px;color:var(--cyan);text-align:center;">
+        ⚡ 15 دقيقة — مناسب للصفقات القصيرة (2-5 دقائق)
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: ASSET -->
+  <div class="card" id="assetCard">
+    <div class="card-header">
+      <div class="step-badge">٢</div>
+      <span>📈</span> اختر الأصل
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('trading',this)">Trading</button>
+      <button class="tab-btn" onclick="switchTab('stocks',this)">Stocks</button>
+      <button class="tab-btn" onclick="switchTab('crypto',this)">Crypto</button>
+    </div>
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" placeholder="ابحث عن أصل..." oninput="filterAssets()" />
+    </div>
+    <div class="asset-list" id="assetList"></div>
+  </div>
+
+  <!-- STEP 3: BUTTON -->
+  <button class="signal-btn" id="analyzeBtn" onclick="startAnalysis()" disabled>
+    🔍 تحليل السوق وعرض التوصية
+  </button>
+
+  <!-- LOADING -->
+  <div class="loading-card hidden" id="loadingCard">
+    <div class="spinner"></div>
+    <div style="font-size:15px;font-weight:600;color:var(--text)">جارٍ تحليل السوق...</div>
+    <div class="loading-steps" id="loadingSteps">
+      <div class="loading-step" id="ls1"><div class="dot"></div>جلب بيانات الشارت</div>
+      <div class="loading-step" id="ls2"><div class="dot"></div>حساب RSI & Stochastic</div>
+      <div class="loading-step" id="ls3"><div class="dot"></div>تحليل MACD & EMA</div>
+      <div class="loading-step" id="ls4"><div class="dot"></div>Bollinger Bands</div>
+      <div class="loading-step" id="ls5"><div class="dot"></div>نمط الشموع اليابانية</div>
+      <div class="loading-step" id="ls6"><div class="dot"></div>تجميع النتائج</div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="hidden" id="resultSection">
+    <div class="result-card" id="resultCard">
+
+      <div class="result-header" id="resultHeader">
+        <div class="result-arrow" id="resultArrow"></div>
+        <div class="result-signal" id="resultSignal"></div>
+        <div class="result-asset" id="resultAsset"></div>
+        <div class="result-time-info" id="resultTimeInfo"></div>
+      </div>
+
+      <div class="confidence-wrap">
+        <div class="confidence-label">
+          <span>قوة الإشارة</span>
+          <strong id="confPct">0%</strong>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="confBar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <div class="chart-title" id="chartTitle">الشارت التحليلي</div>
+        <canvas id="mainChart" height="120"></canvas>
+      </div>
+
+      <div class="indicators-grid" id="indicatorsGrid"></div>
+
+      <div class="summary-section" id="summarySection"></div>
+
+    </div>
+
+    <button class="new-btn" onclick="resetApp()">↩ تحليل جديد</button>
+    <div class="disclaimer">
+      ⚠️ هذه التوصيات للأغراض التعليمية فقط. التداول في الأسواق المالية ينطوي على مخاطر. لا تستثمر أموالاً لا تتحمل خسارتها.
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────
+// dataType: 'forex'=Twelve Data, 'crypto'=Binance, 'otc'=simulation
+const ASSETS = {
+  trading: [
+    { id:'eurusd',    name:'EUR / USD',       icon:'🇪🇺🇺🇸', profit:83, dataType:'forex',  symbol:'EUR/USD'  },
+    { id:'gbpusd',    name:'GBP / USD',       icon:'🇬🇧🇺🇸', profit:82, dataType:'forex',  symbol:'GBP/USD'  },
+    { id:'usdjpy',    name:'USD / JPY',       icon:'🇺🇸🇯🇵', profit:81, dataType:'forex',  symbol:'USD/JPY'  },
+    { id:'audusd',    name:'AUD / USD',       icon:'🇦🇺🇺🇸', profit:80, dataType:'forex',  symbol:'AUD/USD'  },
+    { id:'usdcad',    name:'USD / CAD',       icon:'🇺🇸🇨🇦', profit:80, dataType:'forex',  symbol:'USD/CAD'  },
+    { id:'eurgbp',    name:'EUR / GBP',       icon:'🇪🇺🇬🇧', profit:79, dataType:'forex',  symbol:'EUR/GBP'  },
+    { id:'eurjpy',    name:'EUR / JPY',       icon:'🇪🇺🇯🇵', profit:79, dataType:'forex',  symbol:'EUR/JPY'  },
+    { id:'gbpjpy',    name:'GBP / JPY',       icon:'🇬🇧🇯🇵', profit:78, dataType:'forex',  symbol:'GBP/JPY'  },
+    { id:'usdchf',    name:'USD / CHF',       icon:'🇺🇸🇨🇭', profit:78, dataType:'forex',  symbol:'USD/CHF'  },
+    { id:'nzdusd',    name:'NZD / USD',       icon:'🇳🇿🇺🇸', profit:77, dataType:'forex',  symbol:'NZD/USD'  },
+    // OTC — simulation only
+    { id:'eurotc',    name:'EUR / USD (OTC)', icon:'🇪🇺🇺🇸', profit:82, dataType:'otc',    symbol:null },
+    { id:'gbpotc',    name:'GBP / USD (OTC)', icon:'🇬🇧🇺🇸', profit:81, dataType:'otc',    symbol:null },
+    { id:'usdjpyotc', name:'USD / JPY (OTC)', icon:'🇺🇸🇯🇵', profit:80, dataType:'otc',    symbol:null },
+    { id:'sarsar',    name:'SAR / CNY (OTC)', icon:'🇸🇦🇨🇳', profit:82, dataType:'otc',    symbol:null },
+    { id:'eurcny',    name:'EUR / SAR (OTC)', icon:'🇪🇺🇸🇦', profit:81, dataType:'otc',    symbol:null },
+    { id:'usdngn',    name:'USD / NGN (OTC)', icon:'🇺🇸🇳🇬', profit:82, dataType:'otc',    symbol:null },
+    { id:'sugar',     name:'Sugar (OTC)',     icon:'🍬',      profit:82, dataType:'otc',    symbol:null },
+    { id:'wheat',     name:'Wheat (OTC)',     icon:'🌾',      profit:82, dataType:'otc',    symbol:null },
+    { id:'corn',      name:'Corn (OTC)',      icon:'🌽',      profit:82, dataType:'otc',    symbol:null },
+    { id:'natgas',    name:'Nat. Gas (OTC)',  icon:'💨',      profit:82, dataType:'otc',    symbol:null },
+    { id:'oil',       name:'Crude Oil (OTC)',icon:'🛢️',       profit:80, dataType:'otc',    symbol:null },
+    { id:'gold',      name:'Gold (OTC)',      icon:'🥇',      profit:79, dataType:'otc',    symbol:null },
+    { id:'silver',    name:'Silver (OTC)',    icon:'🥈',      profit:79, dataType:'otc',    symbol:null },
+    { id:'smarty',    name:'Smarty',         icon:'🤖',      profit:83, dataType:'otc',    symbol:null },
+    { id:'cricket',   name:'Cricket Index',  icon:'🏏',      profit:83, dataType:'otc',    symbol:null },
+    { id:'football',  name:'Football Index', icon:'⚽',      profit:82, dataType:'otc',    symbol:null },
+    { id:'ai',        name:'AI Index',       icon:'🧠',      profit:81, dataType:'otc',    symbol:null },
+  ],
+  stocks: [
+    { id:'aapl',  name:'Apple',    icon:'🍎', profit:78, dataType:'stock', symbol:'AAPL'  },
+    { id:'googl', name:'Google',   icon:'🔍', profit:77, dataType:'stock', symbol:'GOOGL' },
+    { id:'tsla',  name:'Tesla',    icon:'⚡', profit:76, dataType:'stock', symbol:'TSLA'  },
+    { id:'amzn',  name:'Amazon',   icon:'📦', profit:77, dataType:'stock', symbol:'AMZN'  },
+    { id:'msft',  name:'Microsoft',icon:'🪟', profit:78, dataType:'stock', symbol:'MSFT'  },
+    { id:'meta',  name:'Meta',     icon:'👾', profit:75, dataType:'stock', symbol:'META'  },
+    { id:'nvda',  name:'NVIDIA',   icon:'💻', profit:76, dataType:'stock', symbol:'NVDA'  },
+    { id:'nflx',  name:'Netflix',  icon:'🎬', profit:74, dataType:'stock', symbol:'NFLX'  },
+  ],
+  crypto: [
+    { id:'btc',  name:'Bitcoin / USD',  icon:'₿',  profit:52, dataType:'crypto', symbol:'BTCUSDT'  },
+    { id:'eth',  name:'Ethereum / USD', icon:'🔷', profit:50, dataType:'crypto', symbol:'ETHUSDT'  },
+    { id:'doge', name:'DOGE / USD',     icon:'🐕', profit:42, dataType:'crypto', symbol:'DOGEUSDT' },
+    { id:'sol',  name:'SOL / USD',      icon:'◎',  profit:40, dataType:'crypto', symbol:'SOLUSDT'  },
+    { id:'ada',  name:'Cardano / USD',  icon:'🔵', profit:37, dataType:'crypto', symbol:'ADAUSDT'  },
+    { id:'bnb',  name:'BNB / USD',      icon:'🟡', profit:20, dataType:'crypto', symbol:'BNBUSDT'  },
+    { id:'xrp',  name:'XRP / USD',      icon:'💧', profit:35, dataType:'crypto', symbol:'XRPUSDT'  },
+  ]
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────
+let selectedTime   = '2m';
+let selectedAsset  = null;
+let currentTab     = 'trading';
+let twelveDataKey  = localStorage.getItem('td_api_key') || '';
+
+// الإطار الزمني للتحليل: label للعرض، api للـ API
+let selectedTFLabel = '15m';
+let selectedTFApi   = '15min';  // Twelve Data / Binance interval
+
+const TF_DESCRIPTIONS = {
+  '5m':  '⚡ 5 دقائق — للصفقات السريعة جداً (1-2 دقيقة) · إشارات كثيرة لكن أقل دقة',
+  '15m': '⚡ 15 دقيقة — مناسب للصفقات القصيرة (2-5 دقائق)',
+  '30m': '🔥 30 دقيقة — توازن جيد بين الدقة والسرعة',
+  '1h':  '✅ ساعة — إشارات أقل لكن أكثر موثوقية',
+  '4h':  '💎 4 ساعات — للصفقات المتوسطة، دقة عالية',
+  '1d':  '🏆 يوم — أعلى دقة، مناسب للاتجاهات الكبيرة',
+};
+
+const BINANCE_TF = {
+  '5m':'5m', '15m':'15m', '30m':'30m', '1h':'1h', '4h':'4h', '1d':'1d'
+};
+const TWELVEDATA_TF = {
+  '5m':'5min', '15m':'15min', '30m':'30min', '1h':'1h', '4h':'4h', '1d':'1day'
+};
+
+// ─── API PANEL TOGGLE ─────────────────────────────────────────────────
+function toggleApiPanel() {
+  const body    = document.getElementById('apiPanelBody');
+  const chevron = document.getElementById('apiChevron');
+  const isOpen  = body.style.display === 'flex';
+  body.style.display    = isOpen ? 'none' : 'flex';
+  body.style.flexDirection = 'column';
+  body.style.gap        = '12px';
+  chevron.classList.toggle('open', !isOpen);
+}
+
+// ─── CHART TIMEFRAME ──────────────────────────────────────────────────
+function selectTF(btn, label, apiVal) {
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedTFLabel = label;
+  selectedTFApi   = apiVal;
+  const desc = document.getElementById('tfDesc');
+  desc.textContent = TF_DESCRIPTIONS[label] || '';
+}
+
+// ─── API KEY ──────────────────────────────────────────────────────────
+function saveApiKey() {
+  twelveDataKey = document.getElementById('apiKeyInput').value.trim();
+  localStorage.setItem('td_api_key', twelveDataKey);
+  updateApiStatus();
+}
+
+function updateApiStatus() {
+  const statusEl = document.getElementById('apiStatus');
+  const dotEl    = document.getElementById('apiStatusDot');
+  if (twelveDataKey.length > 10) {
+    statusEl.innerHTML  = '🟢 مفتاح مفعّل — الفوركس والأسهم ببيانات حقيقية';
+    statusEl.style.color = 'var(--green)';
+    dotEl.textContent   = '🟢 مفعّل';
+    dotEl.style.color   = 'var(--green)';
+    dotEl.style.borderColor = 'var(--green)';
+  } else {
+    statusEl.innerHTML  = '⚪ لم يتم إدخال مفتاح — الفوركس سيعمل بمحاكاة';
+    statusEl.style.color = 'var(--text-muted)';
+    dotEl.textContent   = '⚪ غير مفعّل';
+    dotEl.style.color   = 'var(--text-muted)';
+    dotEl.style.borderColor = 'var(--border)';
+  }
+}
+
+// ─── FETCH REAL DATA ──────────────────────────────────────────────────
+
+// Binance: كريبتو حقيقي — لا يحتاج API Key
+async function fetchBinanceCandles(symbol, interval, limit=200) {
+  interval = interval || BINANCE_TF[selectedTFLabel] || '15m';
+  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Binance fetch failed');
+  const data = await res.json();
+  return data.map(k => ({
+    open:   parseFloat(k[1]),
+    high:   parseFloat(k[2]),
+    low:    parseFloat(k[3]),
+    close:  parseFloat(k[4]),
+    volume: parseFloat(k[5]),
+  }));
+}
+
+// Twelve Data: فوركس وأسهم حقيقية
+async function fetchTwelveDataCandles(symbol, interval, outputsize=200) {
+  interval = interval || TWELVEDATA_TF[selectedTFLabel] || '15min';
+  if (!twelveDataKey) throw new Error('NO_KEY');
+  const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputsize}&apikey=${twelveDataKey}&format=JSON`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('TwelveData fetch failed');
+  const data = await res.json();
+  if (data.status === 'error') throw new Error(data.message || 'TwelveData error');
+  return data.values.map(v => ({
+    open:   parseFloat(v.open),
+    high:   parseFloat(v.high),
+    low:    parseFloat(v.low),
+    close:  parseFloat(v.close),
+    volume: parseFloat(v.volume || 1000),
+  })).reverse(); // Twelve Data returns newest first
+}
+
+// رئيسية: تقرر من أين تجلب البيانات
+async function fetchCandles(asset) {
+  if (asset.dataType === 'crypto') {
+    return await fetchBinanceCandles(asset.symbol);
+  }
+  if (asset.dataType === 'forex' || asset.dataType === 'stock') {
+    return await fetchTwelveDataCandles(asset.symbol);
+  }
+  // OTC: محاكاة
+  throw new Error('OTC');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+function init() {
+  renderAssets(ASSETS.trading);
+}
+
+function renderAssets(list) {
+  const container = document.getElementById('assetList');
+  container.innerHTML = '';
+  list.forEach(asset => {
+    const trend = Math.random() > .5 ? 'up' : 'down';
+    const div = document.createElement('div');
+    div.className = 'asset-item' + (selectedAsset?.id === asset.id ? ' selected' : '');
+    div.onclick = () => selectAsset(asset);
+    div.id = 'asset_' + asset.id;
+    const mkt = getMarketStatus(asset);
+    const mktDot = mkt.open ? '🟢' : '🔴';
+    div.innerHTML = `
+      <div class="asset-icon">${asset.icon}</div>
+      <div class="asset-info">
+        <div class="asset-name">${asset.name}</div>
+        <div class="asset-profit">ربح: ${asset.profit}% &nbsp;${mktDot}</div>
+      </div>
+      <canvas class="asset-mini-chart" id="mini_${asset.id}" width="70" height="30"></canvas>
+      <div class="asset-check">✓</div>
+    `;
+    container.appendChild(div);
+    setTimeout(() => drawMiniChart('mini_' + asset.id, trend), 10);
+  });
+}
+
+function drawMiniChart(id, trend) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = 70, h = 30;
+  const pts = generateLine(10, trend);
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const color = trend === 'up' ? '#3fb950' : '#f85149';
+  ctx.clearRect(0,0,w,h);
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, color + '66');
+  grad.addColorStop(1, color + '00');
+  ctx.beginPath();
+  pts.forEach((v,i) => {
+    const x = (i/(pts.length-1))*w;
+    const y = h - ((v-min)/(max-min||1))*(h-4) - 2;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+function generateLine(n, trend) {
+  const pts = [50];
+  for (let i=1;i<n;i++) {
+    const bias = trend === 'up' ? 0.6 : -0.6;
+    pts.push(pts[i-1] + (Math.random()-0.5+bias)*3);
+  }
+  return pts;
+}
+
+// ─── INTERACTIONS ─────────────────────────────────────────────────────
+function selectTime(btn, val) {
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedTime = val;
+  updateBtn();
+}
+
+function selectAsset(asset) {
+  selectedAsset = asset;
+  document.querySelectorAll('.asset-item').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('asset_' + asset.id);
+  if (el) el.classList.add('selected');
+  updateBtn();
+}
+
+function updateBtn() {
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = !selectedAsset;
+}
+
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('searchInput').value = '';
+  renderAssets(ASSETS[tab] || []);
+}
+
+function filterAssets() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const list = (ASSETS[currentTab] || []).filter(a => a.name.toLowerCase().includes(q));
+  renderAssets(list);
+}
+
+// ─── ANALYSIS ENGINE v2 ───────────────────────────────────────────────
+
+// Generates realistic OHLC with momentum (autocorrelation ~0.65)
+// so TA indicators have a real trend signal to detect
+function generateOHLC(n = 200) {
+  let price = 100 + Math.random() * 50;
+  let momentum = (Math.random() - 0.5) * 0.4;   // initial momentum
+  let vol = 0.8 + Math.random() * 0.6;           // volatility
+  const candles = [];
+
+  for (let i = 0; i < n; i++) {
+    // Momentum decays toward 0 and gets a small random push (AR(1) with φ=0.65)
+    momentum = momentum * 0.65 + (Math.random() - 0.5) * 0.35;
+    // Occasional regime change
+    if (Math.random() < 0.04) momentum *= -1;
+    // Volatility clustering
+    vol = vol * 0.92 + (0.6 + Math.random() * 0.8) * 0.08;
+
+    const open = price;
+    const move = momentum * vol;
+    const noise = (Math.random() - 0.5) * vol * 0.4;
+    const close = open + move + noise;
+    const high  = Math.max(open, close) + Math.abs(noise) * (0.5 + Math.random());
+    const low   = Math.min(open, close) - Math.abs(noise) * (0.5 + Math.random());
+    const volume = 1000 + Math.abs(momentum) * 3000 + Math.random() * 500;
+
+    candles.push({ open, high, low, close, volume });
+    price = close;
+  }
+  return candles;
+}
+
+function closes(candles) { return candles.map(c => c.close); }
+function volumes(candles) { return candles.map(c => c.volume); }
+
+// RSI with full Wilder smoothing
+function calcRSI(prices, period = 14) {
+  if (prices.length < period + 1) return 50;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const d = prices[i] - prices[i - 1];
+    d > 0 ? (gains += d) : (losses -= d);
+  }
+  let avgG = gains / period, avgL = losses / period;
+  for (let i = period + 1; i < prices.length; i++) {
+    const d = prices[i] - prices[i - 1];
+    avgG = (avgG * (period - 1) + (d > 0 ? d : 0)) / period;
+    avgL = (avgL * (period - 1) + (d < 0 ? -d : 0)) / period;
+  }
+  return avgL === 0 ? 100 : 100 - 100 / (1 + avgG / avgL);
+}
+
+function calcEMA(prices, period) {
+  if (prices.length < period) return prices[prices.length - 1];
+  const k = 2 / (period + 1);
+  let ema = prices.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < prices.length; i++) ema = prices[i] * k + ema * (1 - k);
+  return ema;
+}
+
+// Full MACD with proper signal line
+function calcMACD(prices) {
+  const macdLine = [];
+  for (let i = 26; i <= prices.length; i++) {
+    const slice = prices.slice(0, i);
+    macdLine.push(calcEMA(slice, 12) - calcEMA(slice, 26));
+  }
+  const signalLine = calcEMA(macdLine, 9);
+  const hist = macdLine[macdLine.length - 1] - signalLine;
+  const prevHist = macdLine.length > 1
+    ? macdLine[macdLine.length - 2] - calcEMA(macdLine.slice(0, -1), 9)
+    : hist;
+  return {
+    macd: macdLine[macdLine.length - 1],
+    signal: signalLine,
+    hist,
+    histGrowing: hist > prevHist
+  };
+}
+
+// Stochastic %K and %D
+function calcStoch(candles, kPeriod = 14, dPeriod = 3) {
+  if (candles.length < kPeriod + dPeriod) return { k: 50, d: 50 };
+  const kValues = [];
+  for (let i = kPeriod - 1; i < candles.length; i++) {
+    const slice = candles.slice(i - kPeriod + 1, i + 1);
+    const high  = Math.max(...slice.map(c => c.high));
+    const low   = Math.min(...slice.map(c => c.low));
+    const close = candles[i].close;
+    kValues.push(low === high ? 50 : ((close - low) / (high - low)) * 100);
+  }
+  const k = kValues[kValues.length - 1];
+  const d = kValues.slice(-dPeriod).reduce((a, b) => a + b, 0) / dPeriod;
+  return { k, d };
+}
+
+// Bollinger Bands
+function calcBollinger(prices, period = 20, mult = 2) {
+  const slice = prices.slice(-period);
+  const mean  = slice.reduce((a, b) => a + b, 0) / period;
+  const std   = Math.sqrt(slice.reduce((a, b) => a + (b - mean) ** 2, 0) / period);
+  const upper = mean + mult * std;
+  const lower = mean - mult * std;
+  const last  = prices[prices.length - 1];
+  const pct   = lower === upper ? 50 : ((last - lower) / (upper - lower)) * 100;
+  return { upper, lower, mean, pct, std };
+}
+
+// Average True Range
+function calcATR(candles, period = 14) {
+  const trs = candles.slice(1).map((c, i) => {
+    const prev = candles[i];
+    return Math.max(c.high - c.low, Math.abs(c.high - prev.close), Math.abs(c.low - prev.close));
+  });
+  return trs.slice(-period).reduce((a, b) => a + b, 0) / period;
+}
+
+// On-Balance Volume trend
+function calcOBV(candles) {
+  let obv = 0;
+  const obvArr = [0];
+  for (let i = 1; i < candles.length; i++) {
+    if (candles[i].close > candles[i - 1].close) obv += candles[i].volume;
+    else if (candles[i].close < candles[i - 1].close) obv -= candles[i].volume;
+    obvArr.push(obv);
+  }
+  // OBV trend: compare EMA5 vs EMA20 of OBV
+  const obvEma5  = calcEMA(obvArr, 5);
+  const obvEma20 = calcEMA(obvArr, 20);
+  return { rising: obvEma5 > obvEma20, value: obv };
+}
+
+// Candlestick patterns (last 3 candles)
+function detectCandlePattern(candles) {
+  const c  = candles[candles.length - 1];
+  const c1 = candles[candles.length - 2];
+  const c2 = candles[candles.length - 3];
+
+  const body   = Math.abs(c.close - c.open);
+  const range  = c.high - c.low || 0.001;
+  const bull   = c.close > c.open;
+  const bull1  = c1.close > c1.open;
+  const bull2  = c2.close > c2.open;
+  const body1  = Math.abs(c1.close - c1.open);
+
+  // Doji
+  if (body < range * 0.08) return { name: 'Doji ⚖️', dir: 'neutral', strength: 0 };
+
+  // Bullish Engulfing
+  if (!bull1 && bull && c.open < c1.close && c.close > c1.open && body > body1 * 1.1)
+    return { name: 'Bullish Engulfing 🟢', dir: 'buy', strength: 2 };
+
+  // Bearish Engulfing
+  if (bull1 && !bull && c.open > c1.close && c.close < c1.open && body > body1 * 1.1)
+    return { name: 'Bearish Engulfing 🔴', dir: 'sell', strength: 2 };
+
+  // Morning Star
+  const midBody1 = Math.abs(c1.close - c1.open);
+  if (!bull2 && midBody1 < range * 0.3 && bull && c.close > (c2.open + c2.close) / 2)
+    return { name: 'Morning Star ⭐', dir: 'buy', strength: 2 };
+
+  // Evening Star
+  if (bull2 && midBody1 < range * 0.3 && !bull && c.close < (c2.open + c2.close) / 2)
+    return { name: 'Evening Star 🌟', dir: 'sell', strength: 2 };
+
+  // Hammer
+  const lWick = (bull ? c.open : c.close) - c.low;
+  const uWick = c.high - (bull ? c.close : c.open);
+  if (lWick > body * 2.2 && uWick < body * 0.4)
+    return { name: 'Hammer 🔨', dir: 'buy', strength: 1.5 };
+
+  // Shooting Star
+  if (uWick > body * 2.2 && lWick < body * 0.4)
+    return { name: 'Shooting Star 🌠', dir: 'sell', strength: 1.5 };
+
+  // Three white soldiers
+  if (bull && bull1 && bull2 && c.close > c1.close && c1.close > c2.close)
+    return { name: 'Three Soldiers 🪖', dir: 'buy', strength: 2 };
+
+  // Three black crows
+  if (!bull && !bull1 && !bull2 && c.close < c1.close && c1.close < c2.close)
+    return { name: 'Three Crows 🪦', dir: 'sell', strength: 2 };
+
+  return { name: bull ? 'Bullish Bar' : 'Bearish Bar', dir: bull ? 'buy' : 'sell', strength: 0.5 };
+}
+
+// Williams %R
+function calcWilliamsR(candles, period = 14) {
+  const slice = candles.slice(-period);
+  const high  = Math.max(...slice.map(c => c.high));
+  const low   = Math.min(...slice.map(c => c.low));
+  const close = candles[candles.length - 1].close;
+  return high === low ? -50 : ((high - close) / (high - low)) * -100;
+}
+
+// ─── MAIN ANALYSIS (للمحاكاة — يستخدم نفس buildVotes) ────────────────
+function runAnalysis() {
+  const candles = generateOHLC(200);
+  const r = buildVotes(candles);
+  return {
+    signal:     r.signal,
+    confidence: r.confidence,
+    candles:    r.candles,
+    rawConf:    r.rawConf,
+    indicators: r.indMap,
+    votes:      r.votes
+  };
+}
+
+// ─── SHARED VOTE BUILDER (يعمل على أي بيانات — حقيقية أو محاكاة) ──────
+function buildVotes(candles) {
+  const price   = closes(candles);
+  const rsi14   = calcRSI(price, 14);
+  const rsi6    = calcRSI(price, 6);
+  const macd    = calcMACD(price);
+  const stoch   = calcStoch(candles, 14, 3);
+  const boll    = calcBollinger(price, 20);
+  const ema9    = calcEMA(price, 9);
+  const ema21   = calcEMA(price, 21);
+  const ema50   = calcEMA(price, 50);
+  const obv     = calcOBV(candles);
+  const wR      = calcWilliamsR(candles, 14);
+  const pattern = detectCandlePattern(candles);
+
+  const votes = [];
+
+  // ── 1. RSI(14) — 3 مستويات للوزن ──────────────────────────────────
+  // قوي جداً: <30 / >70 | متوسط: <45 / >55 | خفيف: <50 / >50
+  let rsiDir = 'neutral', rsiW = 0;
+  if      (rsi14 < 30) { rsiDir='buy';  rsiW=3;   }
+  else if (rsi14 < 42) { rsiDir='buy';  rsiW=2;   }
+  else if (rsi14 < 50) { rsiDir='buy';  rsiW=1;   }
+  else if (rsi14 > 70) { rsiDir='sell'; rsiW=3;   }
+  else if (rsi14 > 58) { rsiDir='sell'; rsiW=2;   }
+  else if (rsi14 > 50) { rsiDir='sell'; rsiW=1;   }
+  votes.push({ label:'RSI (14)', value:rsi14.toFixed(1), dir:rsiDir, w:rsiW });
+
+  // ── 2. RSI(6) سريع ────────────────────────────────────────────────
+  let rsi6Dir = 'neutral', rsi6W = 0;
+  if      (rsi6 < 25) { rsi6Dir='buy';  rsi6W=2; }
+  else if (rsi6 < 45) { rsi6Dir='buy';  rsi6W=1; }
+  else if (rsi6 > 75) { rsi6Dir='sell'; rsi6W=2; }
+  else if (rsi6 > 55) { rsi6Dir='sell'; rsi6W=1; }
+  votes.push({ label:'RSI (6)', value:rsi6.toFixed(1), dir:rsi6Dir, w:rsi6W });
+
+  // ── 3. MACD — دائماً يصوّت، وزن أعلى عند التسارع ─────────────────
+  const macdDir    = macd.hist > 0 ? 'buy' : 'sell';
+  const macdAccel  = macd.histGrowing === (macd.hist > 0);
+  // وزن إضافي إذا تجاوز الـ signal line حديثاً (hist صغير = تقاطع جديد)
+  const macdCross  = Math.abs(macd.hist) < Math.abs(macd.signal) * 0.3;
+  const macdW      = macdAccel ? (macdCross ? 3 : 2.5) : 1.5;
+  votes.push({ label:'MACD', value:macd.hist.toFixed(6), dir:macdDir, w:macdW });
+
+  // ── 4. Stochastic — عتبات موسّعة ──────────────────────────────────
+  let stochDir = 'neutral', stochW = 0;
+  if      (stoch.k < 20 && stoch.k > stoch.d) { stochDir='buy';  stochW=3; }
+  else if (stoch.k < 35 && stoch.k > stoch.d) { stochDir='buy';  stochW=1.5; }
+  else if (stoch.k < 50)                       { stochDir='buy';  stochW=0.8; }
+  else if (stoch.k > 80 && stoch.k < stoch.d) { stochDir='sell'; stochW=3; }
+  else if (stoch.k > 65 && stoch.k < stoch.d) { stochDir='sell'; stochW=1.5; }
+  else if (stoch.k > 50)                       { stochDir='sell'; stochW=0.8; }
+  votes.push({ label:'Stochastic %K', value:stoch.k.toFixed(1), dir:stochDir, w:stochW });
+
+  // ── 5. Bollinger %B — عتبات موسّعة ───────────────────────────────
+  let bollDir = 'neutral', bollW = 0;
+  if      (boll.pct < 10)  { bollDir='buy';  bollW=3;   }
+  else if (boll.pct < 30)  { bollDir='buy';  bollW=2;   }
+  else if (boll.pct < 45)  { bollDir='buy';  bollW=1;   }
+  else if (boll.pct > 90)  { bollDir='sell'; bollW=3;   }
+  else if (boll.pct > 70)  { bollDir='sell'; bollW=2;   }
+  else if (boll.pct > 55)  { bollDir='sell'; bollW=1;   }
+  votes.push({ label:'Bollinger %B', value:boll.pct.toFixed(1)+'%', dir:bollDir, w:bollW });
+
+  // ── 6. EMA — يصوّت حتى لو اثنان فقط متوافقان ─────────────────────
+  let emaDir = 'neutral', emaW = 0, emaLabel = '';
+  if      (ema9>ema21 && ema21>ema50) { emaDir='buy';  emaW=3;   emaLabel='9>21>50 ✓'; }
+  else if (ema9>ema21)                { emaDir='buy';  emaW=1.5; emaLabel='9>21'; }
+  else if (ema9<ema21 && ema21<ema50) { emaDir='sell'; emaW=3;   emaLabel='9<21<50 ✓'; }
+  else if (ema9<ema21)                { emaDir='sell'; emaW=1.5; emaLabel='9<21'; }
+  votes.push({ label:'EMA (9/21/50)', value:emaLabel||'متقاطع', dir:emaDir, w:emaW });
+
+  // ── 7. OBV — دائماً يصوّت ─────────────────────────────────────────
+  const obvDir = obv.rising ? 'buy' : 'sell';
+  votes.push({ label:'OBV (حجم)', value:obv.rising?'↑ صاعد':'↓ هابط', dir:obvDir, w:2 });
+
+  // ── 8. Williams %R — عتبات موسّعة ────────────────────────────────
+  let wRDir = 'neutral', wRW = 0;
+  if      (wR < -80) { wRDir='buy';  wRW=2.5; }
+  else if (wR < -60) { wRDir='buy';  wRW=1.5; }
+  else if (wR < -50) { wRDir='buy';  wRW=0.8; }
+  else if (wR > -20) { wRDir='sell'; wRW=2.5; }
+  else if (wR > -40) { wRDir='sell'; wRW=1.5; }
+  else if (wR > -50) { wRDir='sell'; wRW=0.8; }
+  votes.push({ label:'Williams %R', value:wR.toFixed(1), dir:wRDir, w:wRW });
+
+  // ── 9. Price vs EMA50 (اتجاه الأمد المتوسط) ──────────────────────
+  const lastPrice  = price[price.length - 1];
+  const priceVsEma = lastPrice > ema50 ? 'buy' : 'sell';
+  const pctAway    = Math.abs(lastPrice - ema50) / ema50 * 100;
+  const pveW       = pctAway > 1 ? 2 : pctAway > 0.3 ? 1.2 : 0.5;
+  votes.push({ label:'السعر vs EMA50', value:(lastPrice>ema50?'فوق':'تحت')+` EMA50`, dir:priceVsEma, w:pveW });
+
+  // ── 10. نمط الشمعة ────────────────────────────────────────────────
+  if (pattern.strength > 0)
+    votes.push({ label:'نمط الشمعة', value:pattern.name, dir:pattern.dir, w:pattern.strength });
+
+  // ── حساب الدرجة الكلية ────────────────────────────────────────────
+  let buyScore=0, sellScore=0, totalW=0;
+  votes.forEach(v => {
+    if (v.dir==='buy')  { buyScore+=v.w;  totalW+=v.w; }
+    if (v.dir==='sell') { sellScore+=v.w; totalW+=v.w; }
+  });
+
+  const dominantDir   = buyScore >= sellScore ? 'buy' : 'sell';
+  const dominantScore = Math.max(buyScore, sellScore);
+  // rawConf: نسبة الأصوات الرابحة من الكل (0.5 = تعادل, 1.0 = إجماع)
+  const rawConf = totalW > 0 ? dominantScore / totalW : 0.5;
+
+  // تحويل rawConf → confidence%
+  // 0.50 → 50% | 0.60 → 60% | 0.70 → 71% | 0.80 → 82% | 0.90 → 93%
+  const confidence = Math.min(98, Math.round(50 + (rawConf - 0.5) / 0.5 * 96));
+
+  const indMap = {};
+  votes.forEach(v => { indMap[v.label] = v; });
+
+  return { signal:dominantDir, confidence, rawConf, candles, indMap, votes };
+}
+
+// ─── ANALYSIS ON REAL CANDLES ──────────────────────────────────────────
+function runAnalysisOnCandles(candles) {
+  const r = buildVotes(candles);
+  return {
+    signal:      r.signal,
+    confidence:  r.confidence,
+    candles:     r.candles,
+    weak:        r.confidence < 70,
+    rawConf:     r.rawConf,
+    indicators:  r.indMap,
+    votes:       r.votes
+  };
+}
+
+// ─── MARKET HOURS ─────────────────────────────────────────────────────
+function getMarketStatus(asset) {
+  const now = new Date();
+  const utcDay  = now.getUTCDay();   // 0=Sun, 6=Sat
+  const utcHour = now.getUTCHours();
+  const utcMin  = now.getUTCMinutes();
+  const utcTime = utcHour + utcMin / 60;
+
+  if (asset.dataType === 'crypto') {
+    return { open: true, label: '🟢 مفتوح 24/7', nextOpen: null };
+  }
+
+  if (asset.dataType === 'otc') {
+    // ExpertOption OTC متاحة 24/7
+    return { open: true, label: '🟢 OTC متاح دائماً', nextOpen: null };
+  }
+
+  if (asset.dataType === 'forex') {
+    // Forex: مفتوح الأحد 22:00 UTC → الجمعة 22:00 UTC
+    const closedWeekend =
+      utcDay === 6 ||                        // السبت كله
+      (utcDay === 0 && utcTime < 22) ||      // الأحد قبل 22:00
+      (utcDay === 5 && utcTime >= 22);       // الجمعة بعد 22:00
+
+    if (closedWeekend) {
+      // حساب متى يفتح
+      let daysUntilOpen = utcDay === 6 ? 1 : (utcDay === 0 ? 0 : 2);
+      const opensAt = new Date(now);
+      opensAt.setUTCDate(opensAt.getUTCDate() + (utcDay === 0 ? 0 : daysUntilOpen));
+      opensAt.setUTCHours(22, 0, 0, 0);
+      const hoursLeft = Math.round((opensAt - now) / 3600000);
+      return {
+        open: false,
+        label: '🔴 سوق الفوركس مغلق',
+        reason: 'عطلة نهاية الأسبوع',
+        nextOpen: `يفتح بعد ~${hoursLeft} ساعة (الأحد 22:00 UTC)`
+      };
+    }
+    return { open: true, label: '🟢 سوق الفوركس مفتوح', nextOpen: null };
+  }
+
+  if (asset.dataType === 'stock') {
+    // US Stocks: الاثنين-الجمعة 13:30-20:00 UTC
+    const closedWeekend = utcDay === 0 || utcDay === 6;
+    const inSession = utcTime >= 13.5 && utcTime < 20;
+
+    if (closedWeekend) {
+      return {
+        open: false,
+        label: '🔴 سوق الأسهم مغلق',
+        reason: 'عطلة نهاية الأسبوع',
+        nextOpen: 'يفتح الاثنين 13:30 UTC (9:30 AM New York)'
+      };
+    }
+    if (!inSession) {
+      const opensAt = utcTime < 13.5 ? '13:30' : '—';
+      return {
+        open: false,
+        label: '🔴 خارج ساعات التداول',
+        reason: utcTime < 13.5 ? 'السوق لم يفتح بعد' : 'السوق أُغلق',
+        nextOpen: utcTime < 13.5
+          ? `يفتح اليوم الساعة ${opensAt} UTC`
+          : 'يفتح غداً 13:30 UTC'
+      };
+    }
+    return { open: true, label: '🟢 سوق الأسهم مفتوح', nextOpen: null };
+  }
+
+  return { open: true, label: '🟢 مفتوح', nextOpen: null };
+}
+
+// ─── DECISION GATE ────────────────────────────────────────────────────
+// Only accept signals where confidence >= 70%
+// If weak, we call runAnalysis() again (up to retries) to find a clear setup
+function runAnalysisWithGate(maxRetries = 6) {
+  let lastResult;
+  for (let i = 0; i < maxRetries; i++) {
+    lastResult = runAnalysis();
+    if (lastResult.confidence >= 70) return { ...lastResult, weak: false };
+  }
+  // كل المحاولات أقل من 70% — أعد آخر نتيجة كإشارة ضعيفة
+  return { ...lastResult, weak: true };
+}
+
+// ─── ANALYSIS FLOW ────────────────────────────────────────────────────
+async function startAnalysis() {
+  if (!selectedAsset) return;
+
+  // ── فحص أوقات السوق أولاً ─────────────────────────────────────────
+  const mktStatus = getMarketStatus(selectedAsset);
+  if (!mktStatus.open) {
+    showMarketClosed(mktStatus);
+    return;
+  }
+
+  document.getElementById('analyzeBtn').classList.add('hidden');
+  document.getElementById('loadingCard').classList.remove('hidden');
+  document.getElementById('resultSection').classList.add('hidden');
+
+  // Reset loading steps
+  ['ls1','ls2','ls3','ls4','ls5','ls6'].forEach(s => {
+    const el = document.getElementById(s);
+    el.classList.remove('active','done');
+  });
+
+  const steps = ['ls1','ls2','ls3','ls4','ls5','ls6'];
+  let stepIdx = 0;
+
+  function advanceStep() {
+    if (stepIdx > 0) {
+      document.getElementById(steps[stepIdx-1]).classList.remove('active');
+      document.getElementById(steps[stepIdx-1]).classList.add('done');
+    }
+    if (stepIdx < steps.length) {
+      document.getElementById(steps[stepIdx]).classList.add('active');
+      stepIdx++;
+    }
+  }
+
+  advanceStep(); // جلب البيانات
+
+  let candles;
+  let dataSource = 'simulation';
+
+  try {
+    candles = await fetchCandles(selectedAsset);
+    dataSource = selectedAsset.dataType === 'crypto' ? 'binance' : 'twelvedata';
+  } catch(e) {
+    if (e.message === 'NO_KEY') {
+      // فوركس بدون مفتاح — محاكاة مع تحذير
+      candles = null;
+      dataSource = 'simulation_no_key';
+    } else if (e.message === 'OTC') {
+      candles = null;
+      dataSource = 'otc';
+    } else {
+      candles = null;
+      dataSource = 'error:' + e.message;
+    }
+  }
+
+  // إكمال خطوات التحليل البصرية
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+  for (let i = stepIdx; i <= steps.length; i++) {
+    advanceStep();
+    await delay(300);
+  }
+
+  await delay(300);
+  showResult(candles, dataSource);
+}
+
+function showMarketClosed(status) {
+  document.getElementById('analyzeBtn').classList.add('hidden');
+  document.getElementById('loadingCard').classList.add('hidden');
+  document.getElementById('resultSection').classList.remove('hidden');
+
+  const hdr = document.getElementById('resultHeader');
+  hdr.className = 'result-header';
+  hdr.style.background = 'linear-gradient(160deg,#1c1c2e,#16213e)';
+  hdr.style.borderBottom = '1px solid #4a4a6a';
+
+  document.getElementById('resultArrow').textContent = '🔒';
+  const sigEl = document.getElementById('resultSignal');
+  sigEl.textContent = 'السوق مغلق';
+  sigEl.className = 'result-signal';
+  sigEl.style.color = '#8b8baa';
+  sigEl.style.fontSize = '28px';
+
+  document.getElementById('resultAsset').textContent = selectedAsset.name;
+  document.getElementById('resultTimeInfo').textContent =
+    `${status.reason || ''} · ${new Date().toLocaleTimeString('ar')}`;
+
+  // شريط الثقة — فارغ
+  document.getElementById('confPct').textContent = '—';
+  const bar = document.getElementById('confBar');
+  bar.style.width = '0%';
+  bar.style.background = '#4a4a6a';
+
+  // شارت فارغ
+  const canvas = document.getElementById('mainChart');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.offsetWidth || 480;
+  canvas.width = w; canvas.height = 120;
+  ctx.fillStyle = '#161b22';
+  ctx.fillRect(0,0,w,120);
+  ctx.fillStyle = '#8b8baa';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('لا توجد بيانات — السوق مغلق', w/2, 65);
+
+  document.getElementById('indicatorsGrid').innerHTML = `
+    <div class="ind-item" style="grid-column:1/-1;flex-direction:column;gap:12px;padding:24px;text-align:center;">
+      <div style="font-size:40px;">🔒</div>
+      <div style="color:var(--text);font-size:15px;font-weight:700;">${status.label}</div>
+      ${status.nextOpen ? `<div style="color:var(--cyan);font-size:13px;">⏰ ${status.nextOpen}</div>` : ''}
+      <div style="color:var(--text-muted);font-size:12px;margin-top:4px;">
+        جرّب أصول الكريبتو (BTC, ETH...) — متاحة 24/7
+      </div>
+    </div>`;
+
+  document.getElementById('summarySection').innerHTML = `
+    <div class="summary-row">
+      <span class="summary-key">حالة السوق</span>
+      <span class="summary-val" style="color:#8b8baa;">${status.label}</span>
+    </div>
+    ${status.nextOpen ? `
+    <div class="summary-row">
+      <span class="summary-key">موعد الفتح</span>
+      <span class="summary-val" style="color:var(--cyan);">${status.nextOpen}</span>
+    </div>` : ''}
+    <div class="summary-row">
+      <span class="summary-key">بديل متاح الآن</span>
+      <span class="summary-val" style="color:var(--green);">₿ BTC / ETH / SOL</span>
+    </div>`;
+
+  document.getElementById('resultSection').scrollIntoView({ behavior:'smooth' });
+}
+
+function showResult(realCandles, dataSource = 'simulation') {
+  // إذا عندنا بيانات حقيقية نحللها مباشرة، وإلا نستخدم المحاكاة
+  const result = realCandles
+    ? runAnalysisOnCandles(realCandles)
+    : runAnalysisWithGate(6);
+  document.getElementById('loadingCard').classList.add('hidden');
+  document.getElementById('resultSection').classList.remove('hidden');
+
+  // ── WEAK SIGNAL: show wait screen ──────────────────────────────────
+  if (result.weak) {
+    const hdr = document.getElementById('resultHeader');
+    hdr.className = 'result-header';
+    hdr.style.background = 'linear-gradient(160deg,#1c2333,#161b22)';
+    hdr.style.borderBottom = '1px solid #e3b341';
+    document.getElementById('resultArrow').textContent = '⏳';
+    const sigEl = document.getElementById('resultSignal');
+    sigEl.textContent = 'انتظر';
+    sigEl.className = 'result-signal';
+    sigEl.style.color = 'var(--gold)';
+    sigEl.style.fontSize = '36px';
+    document.getElementById('resultAsset').textContent = selectedAsset.name;
+    document.getElementById('resultTimeInfo').textContent =
+      `السوق غير واضح الآن — حاول بعد دقيقتين · ${new Date().toLocaleTimeString('ar')}`;
+
+    document.getElementById('confPct').textContent = result.confidence + '%';
+    const bar = document.getElementById('confBar');
+    bar.className = 'bar-fill';
+    bar.style.background = 'var(--gold)';
+    setTimeout(() => { bar.style.width = result.confidence + '%'; }, 100);
+
+    drawMainChart(result.candles, 'neutral');
+
+    document.getElementById('indicatorsGrid').innerHTML = `
+      <div class="ind-item" style="grid-column:1/-1;justify-content:center;padding:20px;">
+        <span style="color:var(--gold);font-size:14px;font-weight:600;">
+          ⚠️ المؤشرات متضاربة — لا توجد إشارة واضحة بنسبة تجاوز 70%
+        </span>
+      </div>`;
+
+    document.getElementById('summarySection').innerHTML = `
+      <div class="summary-row">
+        <span class="summary-key">قوة الإشارة</span>
+        <span class="summary-val" style="color:var(--gold)">${result.confidence}% (أقل من الحد الأدنى 70%)</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-key">التوصية</span>
+        <span class="summary-val" style="color:var(--gold)">⏳ انتظر فرصة أفضل</span>
+      </div>`;
+
+    document.getElementById('resultSection').scrollIntoView({ behavior:'smooth' });
+    return;
+  }
+
+  // ── STRONG SIGNAL ──────────────────────────────────────────────────
+  const isBuy = result.signal === 'buy';
+
+  const hdr = document.getElementById('resultHeader');
+  hdr.className = 'result-header ' + result.signal;
+  hdr.style = '';
+  document.getElementById('resultArrow').textContent = isBuy ? '↑' : '↓';
+  const sigEl = document.getElementById('resultSignal');
+  sigEl.textContent = isBuy ? 'شراء' : 'بيع';
+  sigEl.className = 'result-signal ' + result.signal;
+  sigEl.style = '';
+  document.getElementById('resultAsset').textContent = selectedAsset.name;
+  const srcLabel = {
+    binance: '🟢 بيانات Binance حقيقية',
+    twelvedata: '🟢 بيانات Twelve Data حقيقية',
+    simulation: '🟡 محاكاة (OTC)',
+    simulation_no_key: '🟠 محاكاة (أدخل API Key للفوركس)',
+    otc: '🟡 محاكاة (أصول OTC)'
+  }[dataSource] || '⚪ محاكاة';
+
+  document.getElementById('resultTimeInfo').innerHTML =
+    `مدة الصفقة: ${selectedTime} · إطار 5 دقائق · ${new Date().toLocaleTimeString('ar')}<br>
+     <span style="font-size:11px;opacity:.8;">${srcLabel}</span>`;
+
+  const bar = document.getElementById('confBar');
+  bar.className = 'bar-fill ' + result.signal;
+  bar.style = '';
+  setTimeout(() => {
+    document.getElementById('confPct').textContent = result.confidence + '%';
+    bar.style.width = result.confidence + '%';
+  }, 100);
+
+  document.getElementById('chartTitle').textContent =
+    `الشارت التحليلي — إطار ${selectedTFLabel}`;
+  drawMainChart(result.candles, result.signal);
+
+  // Indicators grid
+  const grid = document.getElementById('indicatorsGrid');
+  grid.innerHTML = '';
+  Object.values(result.indicators).forEach(ind => {
+    const div = document.createElement('div');
+    div.className = 'ind-item';
+    div.innerHTML = `
+      <span class="ind-name">${ind.label}</span>
+      <span class="ind-value ${ind.dir}">${ind.value}</span>`;
+    grid.appendChild(div);
+  });
+
+  // Summary counts (weighted)
+  const buyCnt  = result.votes.filter(v => v.dir === 'buy').length;
+  const sellCnt = result.votes.filter(v => v.dir === 'sell').length;
+  const neutCnt = result.votes.filter(v => v.dir === 'neutral').length;
+
+  document.getElementById('summarySection').innerHTML = `
+    <div class="summary-row">
+      <span class="summary-key">إشارات شراء</span>
+      <span class="summary-val" style="color:var(--green)">${buyCnt} مؤشرات</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-key">إشارات بيع</span>
+      <span class="summary-val" style="color:var(--red)">${sellCnt} مؤشرات</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-key">محايدة</span>
+      <span class="summary-val" style="color:var(--gold)">${neutCnt} مؤشرات</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-key">نسبة ربح الأصل</span>
+      <span class="summary-val">${selectedAsset.profit}%</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-key">قوة الإشارة</span>
+      <span class="summary-val" style="color:var(--cyan)">${result.confidence}%</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-key">التوصية النهائية</span>
+      <span class="summary-val" style="color:var(--${isBuy?'green':'red'});font-size:16px;">
+        ${isBuy ? '📈 شراء' : '📉 بيع'}
+      </span>
+    </div>`;
+
+  document.getElementById('resultSection').scrollIntoView({ behavior:'smooth' });
+}
+
+function drawMainChart(candles, signal) {
+  const canvas = document.getElementById('mainChart');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.offsetWidth || 480;
+  const h = 120;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const slice = candles.slice(-60);
+  const allH = slice.map(c=>c.high), allL = slice.map(c=>c.low);
+  const max = Math.max(...allH), min = Math.min(...allL);
+  const range = max - min || 1;
+  const padL=10, padR=10, padT=8, padB=8;
+  const cw = w - padL - padR;
+  const ch = h - padT - padB;
+
+  const toX = i => padL + (i/(slice.length-1))*cw;
+  const toY = v => padT + (1-(v-min)/range)*ch;
+
+  // Background grid
+  ctx.strokeStyle = '#30363d33';
+  ctx.lineWidth = 1;
+  [0,.25,.5,.75,1].forEach(t => {
+    const y = padT + t*ch;
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+  });
+
+  // Price line
+  const prices = slice.map(c=>c.close);
+  const color = signal==='buy' ? '#3fb950' : signal==='sell' ? '#f85149' : '#e3b341';
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, color+'55');
+  grad.addColorStop(1, color+'00');
+
+  ctx.beginPath();
+  prices.forEach((p,i) => { i===0 ? ctx.moveTo(toX(i),toY(p)) : ctx.lineTo(toX(i),toY(p)); });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.lineTo(toX(prices.length-1), h);
+  ctx.lineTo(toX(0), h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // EMA line (simple)
+  const k = 2/10;
+  let ema = prices[0];
+  ctx.beginPath();
+  prices.forEach((p,i) => {
+    ema = p*k + ema*(1-k);
+    i===0 ? ctx.moveTo(toX(i),toY(ema)) : ctx.lineTo(toX(i),toY(ema));
+  });
+  ctx.strokeStyle = '#58a6ff88';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Signal arrow at end
+  const lastX = toX(prices.length-1);
+  const lastY = toY(prices[prices.length-1]);
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = color;
+  ctx.fillText(signal==='buy'?'▲':'▼', lastX-8, lastY-(signal==='buy'?10:-2));
+}
+
+function resetApp() {
+  document.getElementById('resultSection').classList.add('hidden');
+  document.getElementById('analyzeBtn').classList.remove('hidden');
+  document.querySelectorAll('#loadingSteps .loading-step').forEach(el => {
+    el.classList.remove('done','active');
+  });
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+// ─── START ────────────────────────────────────────────────────────────
+// Restore saved API key
+if (twelveDataKey) {
+  document.getElementById('apiKeyInput').value = twelveDataKey;
+  updateApiStatus();
+}
+init();
+</script>
+</body>
+</html>
