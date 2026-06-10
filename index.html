@@ -1343,6 +1343,67 @@ function calcADX(candles, period = 14) {
   return tail.reduce((a,b)=>a+b, 0) / (tail.length || 1);
 }
 
+// ─── SUPPORT & RESISTANCE + SWING HIGHS/LOWS ─────────────────────────
+function calcSR(candles, lookback = 60) {
+  const slice = candles.slice(-lookback);
+  const highs = slice.map(c => c.high);
+  const lows  = slice.map(c => c.low);
+  const last  = candles[candles.length - 1].close;
+
+  // القمم والقيعان المحورية (swing: أعلى/أقل من جاريه)
+  const swingH = [], swingL = [];
+  for (let i = 2; i < slice.length - 2; i++) {
+    if (highs[i] > highs[i-1] && highs[i] > highs[i-2] &&
+        highs[i] > highs[i+1] && highs[i] > highs[i+2])
+      swingH.push(highs[i]);
+    if (lows[i] < lows[i-1] && lows[i] < lows[i-2] &&
+        lows[i] < lows[i+1] && lows[i] < lows[i+2])
+      swingL.push(lows[i]);
+  }
+
+  // دمج المستويات المتقاربة (في نطاق 0.4% من بعض)
+  const merge = arr => {
+    if (!arr.length) return [];
+    arr.sort((a,b) => a-b);
+    const out = [arr[0]];
+    for (let i = 1; i < arr.length; i++)
+      if (Math.abs(arr[i] - out[out.length-1]) / out[out.length-1] > 0.004)
+        out.push(arr[i]);
+    return out;
+  };
+
+  const resistances = merge(swingH).filter(v => v > last).slice(0, 3);  // أقرب 3 فوق
+  const supports    = merge(swingL).filter(v => v < last).slice(-3);    // أقرب 3 تحت
+
+  // أقرب دعم ومقاومة
+  const nearR = resistances.length ? Math.min(...resistances) : null;
+  const nearS = supports.length    ? Math.max(...supports)    : null;
+
+  // مسافة السعر الحالي كنسبة مئوية
+  const distR = nearR ? (nearR - last) / last * 100 : 999;
+  const distS = nearS ? (last - nearS) / last * 100 : 999;
+
+  // تقييم الموقع: + = قريب من دعم (فرصة شراء) | - = قريب من مقاومة (فرصة بيع)
+  let srScore = 0;
+  if (distS < distR) {
+    // أقرب للدعم
+    srScore = distS < 0.5 ? 0.8 : distS < 1.5 ? 0.5 : distS < 3 ? 0.2 : 0;
+  } else {
+    // أقرب للمقاومة
+    srScore = distR < 0.5 ? -0.8 : distR < 1.5 ? -0.5 : distR < 3 ? -0.2 : 0;
+  }
+
+  // وصف نصي للعرض
+  let srLabel = '';
+  if (nearS && distS < 3)
+    srLabel = `دعم @ ${nearS.toFixed(nearS < 10 ? 5 : 2)} (${distS.toFixed(1)}% أسفل)`;
+  if (nearR && distR < 3)
+    srLabel += (srLabel ? ' | ' : '') + `مقاومة @ ${nearR.toFixed(nearR < 10 ? 5 : 2)} (${distR.toFixed(1)}% فوق)`;
+  if (!srLabel) srLabel = 'لا مستويات قريبة';
+
+  return { srScore, srLabel, nearS, nearR, distS, distR, supports, resistances };
+}
+
 // ─── CORE SIGNAL — مجمّع حسب نوع السوق (يعالج تداخل المؤشرات) ─────────
 // يرجع score بين -1 (بيع قوي) و +1 (شراء قوي)
 function computeSignal(candles) {
@@ -1374,43 +1435,35 @@ function computeSignal(candles) {
   let T = emaAlign*0.5 + (macd.hist>0?0.3:-0.3) + (last>e50?0.2:-0.2);
   T = Math.max(-1, Math.min(1, T));
 
-  const V = obv.rising ? 1 : -1;            // الحجم
-  const Bmean = (50 - boll.pct) / 50;        // + قرب النطاق السفلي (شراء)
+  const V = obv.rising ? 1 : -1;
+  const Bmean = (50 - boll.pct) / 50;
+  const SR  = calcSR(candles);             // دعم ومقاومة
 
   // ── القرار حسب نوع السوق ─────────────────────────────────────────
   let regime, regimeLabel, score;
-  // اتجاه السوق من EMA50 وآخر 10 شموع
   const recentPrices = price.slice(-10);
-  const priceTrend   = recentPrices[recentPrices.length-1] - recentPrices[0];
-  const trendDir     = T >= 0.25 ? 'up' : T <= -0.25 ? 'down' : 'flat';
+  const trendDir = T >= 0.25 ? 'up' : T <= -0.25 ? 'down' : 'flat';
 
   if (adx >= 25) {
     regime = 'trend';
-    if (trendDir === 'up')
-      regimeLabel = '📈 سوق متجه للأعلى';
-    else if (trendDir === 'down')
-      regimeLabel = '📉 سوق متجه للأسفل';
-    else
-      regimeLabel = '📊 سوق متجه';
-    score = 0.75*T + 0.25*V;
+    regimeLabel = trendDir==='up' ? '📈 سوق متجه للأعلى'
+                : trendDir==='down' ? '📉 سوق متجه للأسفل' : '📊 سوق متجه';
+    score = 0.60*T + 0.20*V + 0.20*SR.srScore;  // S/R يؤكد أو يخفف
     if (T>0 && O> 0.85) score *= 0.4;
     if (T<0 && O<-0.85) score *= 0.4;
   } else if (adx < 18) {
     regime = 'range'; regimeLabel = '↔️ سوق عرضي (لا اتجاه)';
-    score = -0.7*O + 0.2*Bmean + 0.1*V;
+    score = -0.5*O + 0.2*Bmean + 0.1*V + 0.20*SR.srScore;  // S/R أهم في السوق العرضي
   } else {
     regime = 'mixed';
-    if (trendDir === 'up')
-      regimeLabel = '🔀 سوق مختلط — ميل للأعلى';
-    else if (trendDir === 'down')
-      regimeLabel = '🔀 سوق مختلط — ميل للأسفل';
-    else
-      regimeLabel = '🔀 سوق مختلط';
-    score = 0.5*T - 0.35*O + 0.15*V;
+    regimeLabel = trendDir==='up' ? '🔀 سوق مختلط — ميل للأعلى'
+                : trendDir==='down' ? '🔀 سوق مختلط — ميل للأسفل' : '🔀 سوق مختلط';
+    score = 0.40*T - 0.30*O + 0.10*V + 0.20*SR.srScore;
   }
   score = Math.max(-1, Math.min(1, score));
-  const signal = score > 0.08 ? 'buy' : score < -0.08 ? 'sell' : 'none';
-  return { signal, score, regime, regimeLabel, adx };
+  // عتبة منخفضة قليلاً لتعطي توصيات أكثر
+  const signal = score > 0.06 ? 'buy' : score < -0.06 ? 'sell' : 'none';
+  return { signal, score, regime, regimeLabel, adx, SR };
 }
 
 // ─── BACKTEST — يقيس الدقة الفعلية على البيانات التاريخية ────────────
@@ -1469,6 +1522,8 @@ function analyzeCandles(candles, profit) {
     breakeven, edge, hasEdge,
     regimeLabel: cur.regimeLabel,
     adx:         Math.round(cur.adx),
+    srLabel:     cur.SR ? cur.SR.srLabel : '',
+    srData:      cur.SR || null,
     btTotal:     bt.total,
     btWinRate:   Math.round(bt.winRate * 100),
     candles,
@@ -1723,7 +1778,9 @@ function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTF
   }[dataSource] || '⚪ محاكاة';
 
   // معلومة الـ backtest المشتركة
-  const btNote = `📊 اختُبرت على ${result.btTotal} إشارة سابقة · نوع السوق: ${result.regimeLabel} (ADX ${result.adx})`;
+  const btNote = `📊 ${result.btTotal} إشارة سابقة · ${result.regimeLabel} (ADX ${result.adx})`;
+  const srNote = result.srLabel && result.srLabel !== 'لا مستويات قريبة'
+    ? `📍 ${result.srLabel}` : '';
 
   // ── حالة: لا أفضلية (انتظر) ─────────────────────────────────────────
   if (result.weak) {
@@ -1749,7 +1806,7 @@ function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTF
     setTimeout(() => { bar.style.width = result.probability + '%'; }, 100);
 
     document.getElementById('chartTitle').textContent = `الشارت التحليلي — إطار ${tfLabel}`;
-    drawMainChart(candles, 'neutral');
+    drawMainChart(candles, 'neutral', result.srData);
 
     const reason = result.signal === 'none' || result.btTotal < 10
       ? 'السوق غير واضح — لا توجد إشارة قوية'
@@ -1802,7 +1859,7 @@ function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTF
   }, 100);
 
   document.getElementById('chartTitle').textContent = `الشارت التحليلي — إطار ${tfLabel}`;
-  drawMainChart(candles, result.signal);
+  drawMainChart(candles, result.signal, result.srData);
 
   // شبكة المؤشرات
   const grid = document.getElementById('indicatorsGrid');
@@ -1814,11 +1871,13 @@ function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTF
       <span class="ind-value ${ind.dir}">${ind.value}</span>`;
     grid.appendChild(div);
   });
-  // صف نوع السوق
+  // صف نوع السوق + الدعم والمقاومة
   const regimeDiv = document.createElement('div');
   regimeDiv.className = 'ind-item';
-  regimeDiv.style.cssText = 'grid-column:1/-1;justify-content:center;background:var(--surface3);';
-  regimeDiv.innerHTML = `<span style="color:var(--text-muted);font-size:12px;">${btNote}</span>`;
+  regimeDiv.style.cssText = 'grid-column:1/-1;flex-direction:column;gap:5px;background:var(--surface3);padding:12px;';
+  regimeDiv.innerHTML = `
+    <span style="color:var(--text-muted);font-size:12px;">${btNote}</span>
+    ${srNote ? `<span style="color:var(--cyan);font-size:12px;">${srNote}</span>` : ''}`;
   grid.appendChild(regimeDiv);
 
   document.getElementById('summarySection').innerHTML = `
@@ -1837,7 +1896,7 @@ function showResult(realCandles, dataSource = 'simulation', tfLabel = selectedTF
   document.getElementById('resultSection').scrollIntoView({ behavior:'smooth' });
 }
 
-function drawMainChart(candles, signal) {
+function drawMainChart(candles, signal, srData = null) {
   const canvas = document.getElementById('mainChart');
   const dpr = window.devicePixelRatio || 1;
   const w = canvas.offsetWidth || 480;
@@ -1900,6 +1959,33 @@ function drawMainChart(candles, signal) {
   ctx.setLineDash([4,3]);
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // ── خطوط الدعم والمقاومة ──────────────────────────────────────────
+  if (srData) {
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 1.2;
+    // مقاومة (أحمر)
+    (srData.resistances || []).forEach(r => {
+      if (r < min || r > max) return;
+      const y = toY(r);
+      ctx.strokeStyle = '#f8514988';
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w-padR, y); ctx.stroke();
+      ctx.fillStyle = '#f85149cc';
+      ctx.font = '9px sans-serif';
+      ctx.fillText('R', padL+2, y-2);
+    });
+    // دعم (أخضر)
+    (srData.supports || []).forEach(s => {
+      if (s < min || s > max) return;
+      const y = toY(s);
+      ctx.strokeStyle = '#3fb95088';
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w-padR, y); ctx.stroke();
+      ctx.fillStyle = '#3fb950cc';
+      ctx.font = '9px sans-serif';
+      ctx.fillText('S', padL+2, y+8);
+    });
+    ctx.setLineDash([]);
+  }
 
   // Signal arrow at end
   const lastX = toX(prices.length-1);
